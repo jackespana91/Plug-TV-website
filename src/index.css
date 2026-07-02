@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Self-hosted fonts — the game must look right with no external network. */
+@font-face {
+  font-family: "Bungee";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/bungee-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format("woff2");
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(268 80% 62% / 0.14), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 110%, hsl(142 76% 48% / 0.1), transparent);
+    background-attachment: fixed;
+  }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+}
+
+@layer utilities {
+  .text-glow-green {
+    text-shadow: 0 0 24px hsl(142 76% 48% / 0.55);
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 24px hsl(268 80% 62% / 0.55);
+  }
+}
