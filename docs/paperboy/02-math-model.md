@@ -1,7 +1,9 @@
 # PAPERBOY: THE RUN
-## Mathematical Model & RNG Specification — v1.0
+## Mathematical Model & RNG Specification — v1.1
 
 > **Phase 3 deliverable.** This document defines the underlying math for the game specified in `01-game-design-document.md`. Guiding constraint: **the player never controls the character; the animation visualizes a pre-determined RNG result.** Every number here is a launch-candidate default, structured so a certification lab can verify it and an operator can configure it.
+>
+> **v1.1** — figures reconciled against the reference implementation (`paperboy/src/engine/`) and its Monte-Carlo verification (`npm run simulate`). Two corrections from v1.0: the Perfect Run bonus as originally drafted contained a decimal error that would have added ~35% RTP (not 0.35%) — v1 now ships it celebration-only per this document's own §7 fallback, with its budget folded into the ladder; and the Big Paper prize weights are retuned to actually hit E ≈ 5× (the v1.0 table's true mean was 6.0×).
 
 ---
 
@@ -49,28 +51,28 @@ Three routes, per the GDD. Total target RTP **96.0%** per route (configurable, �
 | | 🌅 Easy Street | 🏘 Suburbia (default) | 🌆 Dog Alley |
 |---|---|---|---|
 | Per-step survival **p** | 0.94 | 0.90 | 0.80 |
-| Ladder constant **R_L** | 94.5% | 92.0% | 93.0% |
-| Feature budget | 1.5% | 4.0% | 3.0% |
+| Ladder constant **R** (incl. boosts, §5.2) | 94.5% | 93.6% | 94.0% |
+| Feature budget | 1.5% | 2.4% | 2.0% |
 | **Total RTP** | **96.0%** | **96.0%** | **96.0%** |
-| Ladder growth per house | +6.4% | +11.1% | +25.0% |
-| First-rung multiplier m(1) | 1.005× | 1.02× | 1.16× |
+| Base-ladder growth per house | +6.4% | +9.8% | +22.5% |
+| First-rung multiplier m(1) | 1.005× | 1.028× | 1.152× |
 | Mean run length (houses) | 15.7 | 9.0 | 4.0 |
 | Median run length | 11 | 7 | 3 |
 | Hit frequency (cash at rung 1) | 94.0% | 90.0% | 80.0% |
-| Houses to reach ×2 | ~12 | ~8 | ~4 |
-| Houses to reach ×10 | ~38 | ~23 | ~10 |
-| Houses to reach ×100 | ~74 | ~45 | ~19 |
+| Houses to reach ×2 | 13 | 9 | 4 |
+| Houses to reach ×10 | 39 | 26 | 12 |
+| Houses to reach ×100 | 76 | 50 | 23 |
 | Max win (cap) | 10,000× | 10,000× | 10,000× |
-| Houses at cap | ~148 | ~88 | ~42 |
-| P(reach cap) | ≈ 1 / 10,600 | ≈ 1 / 10,900 | ≈ 1 / 10,800 |
+| Houses at cap | 150 | 100 | 46 |
+| P(reach cap) = p^cap | ≈ 1 / 10,750 | ≈ 1 / 37,600 | ≈ 1 / 28,700 |
 
 Feature budgets differ deliberately: Easy Street players cash early and rarely see deep-run features, so its RTP sits mostly in the ladder; Suburbia carries the full feature set.
 
-**Sample ladder — Suburbia** (m(k) = 0.92 / 0.9^k, rounded to 2 dp for display):
+**Sample base ladder — Suburbia** (m(k) = 0.936 / (0.9·1.012)^k per §5.2, rounded to 2 dp for display):
 
-| House | 1 | 2 | 3 | 5 | 7 | 10 | 15 | 20 | 25 | 30 | 45 | 88 (cap) |
+| House | 1 | 2 | 3 | 5 | 7 | 10 | 15 | 20 | 25 | 30 | 45 | 100 (cap) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Multiplier | 1.02 | 1.14 | 1.26 | 1.56 | 1.92 | 2.64 | 4.47 | 7.57 | 12.81 | 21.68 | ~105 | 10,000 |
+| Multiplier | 1.03 | 1.13 | 1.24 | 1.49 | 1.80 | 2.38 | 3.80 | 6.07 | 9.68 | 15.44 | ~63 | 10,000 |
 
 Displayed rungs are rounded; settlement uses exact values. The final rung is clamped to the max-win cap (the cap clamp's RTP effect is < 0.01% and is included in the certified simulation report).
 
@@ -78,10 +80,10 @@ Displayed rungs are rounded; settlement uses exact values. The final rung is cla
 
 | Strategy | Hit rate | Std. dev. (× bet) |
 |---|---|---|
-| Cash at ×1.5 | ~61% | ~0.75 |
-| Cash at ×3 | ~30% | ~1.7 |
-| Cash at ×10 | ~9% | ~3.0 |
-| Cash at ×100 | ~0.9% | ~9.6 |
+| Cash at ×1.5 (rung 6) | ~53% | ~0.8 |
+| Cash at ×3 (rung 13) | ~25% | ~1.4 |
+| Cash at ×10 (rung 26) | ~6.5% | ~3.0 |
+| Cash at ×100 (rung 50) | ~0.5% | ~9.6 |
 
 (For a binary outcome at multiplier m with success probability s = R_L/m: SD = √(m·R_L·(1−s)).) The game's *effective* volatility is player-chosen — the defining property of the genre. Marketing volatility label: Easy Street "low–medium", Suburbia "medium–high", Dog Alley "high", with the above tables in the certification pack.
 
@@ -91,12 +93,13 @@ Displayed rungs are rounded; settlement uses exact values. The final rung is cla
 
 | Component | Mechanism | Contribution |
 |---|---|---|
-| Multiplier ladder | §2 | 92.0% |
+| Multiplier ladder incl. 📰 Golden Newspaper boosts | §2, §5.2 | 93.6% |
 | 💰 Money Envelopes | §5.1 | 1.4% |
-| 📰 Golden Newspaper boosts | §5.2 | 1.2% |
 | 🗞 Daily Big Paper bonus | §6 | 1.0% |
-| 🏆 Perfect Run bonus | §7 | ≤ 0.4% |
+| 🏆 Perfect Run | §7 | 0% — celebration-only in v1 |
 | **Total** | | **96.0%** |
+
+(The Golden Newspaper deflation construction of §5.2 makes boosts part of the ladder constant rather than a separable line item: boost events carry a growing share of the ladder expectation the deeper a run goes, but the *sum* at every cash-out rung is the constant R.)
 
 ⭐ VIP Newspaper and 🎁 Free Delivery are **presentation slots with zero independent EV**: a VIP house dresses a normal (or boosted) rung; a Free Delivery dresses a scripted step with survival probability 1 inserted purely for pacing (it adds no rung value and consumes no risk, so it is RTP-neutral by construction).
 
@@ -133,20 +136,21 @@ VIP Newspaper and Subscription Reward per §4 — zero EV, dressing only. This m
 
 | Prize (× bet) | 2 | 5 | 10 | 25 | 100 | 500 |
 |---|---|---|---|---|---|---|
-| Weight | 55% | 30% | 10% | 4% | 0.9% | 0.1% |
+| Weight | 70.6% | 20% | 6% | 2.4% | 0.9% | 0.1% |
 
-(Table E = 5.03×; final weights tuned in simulation.)
+(Table E = 5.01×.)
 
 ---
 
-## 7. Perfect Run Bonus
+## 7. Perfect Run (celebration-only in v1)
 
-Pays **b = 1.0× bet**, added at cash-out, if the run reaches **10+ deliveries** and is cashed out (Suburbia; thresholds 15/7 for Easy Street/Dog Alley to equalize reach probability ≈ 35/39/21%).
+Reaching **10+ deliveries** and cashing out (Suburbia; thresholds 15/7 for Easy Street/Dog Alley, reach probability ≈ 39/35/21%) triggers the Perfect Run celebration, sticker-album entry, and leaderboard flag — **with no payout in v1**.
 
-This is the model's one strategy-dependent component: only players who ride to the threshold can realize it. Maximum EV = b·p^10 = 0.35% (Suburbia); a player who always cashes at rung 1 forgoes it. Consequences, handled explicitly:
+**Why (v1.1 correction).** v1.0 drafted this as a flat b = 1.0× bet bonus and budgeted it at "0.35%" — a decimal error. The true cost for a threshold rider is b·p¹⁰ = **0.349× bet ≈ 35% RTP** (Suburbia), which Monte-Carlo verification confirmed: threshold-cash-out policies measured ~130% RTP, an exploitable house-edge inversion. The structural problem is that threshold reach is *common* (21–39%), so any bonus large enough to feel meaningful is far too expensive, and any affordable bonus (~0.01× bet) is insulting. v1 therefore ships the pre-approved fallback — celebration without payout — and the freed budget lives in the ladder constant (§3's R values).
 
-- Published RTP is disclosed as a range: **95.6% – 96.0%** (jurisdictions requiring a single figure display the maximum with the range in the help file — standard practice for strategy-dependent games).
-- If an operator or regulator objects, the v1 fallback is pre-approved: Perfect Run becomes a celebration + sticker with no payout, and its 0.4% budget moves into the ladder constant. The GDD supports either without redesign.
+A paid Perfect Run remains a v2 candidate if redesigned around a genuinely rare condition (e.g., a much deeper threshold near p^k ≈ 0.3%), as a separately certified configuration.
+
+With this change, **every paid component except envelope depth-accrual (§5.1) is strategy-independent**; the published RTP band across cash-out policies narrows to roughly **94.8% – 96.0%** (measured, `npm run simulate`), driven only by how many envelope-bearing steps a player rides through.
 
 ---
 
@@ -196,12 +200,12 @@ The server resolves the round into a compact script; the client dramatizes it. E
 
 RTP variants are produced by scaling the ladder constant only (feature parameters fixed):
 
-| Variant | Total RTP | R_L (Suburbia) |
+| Variant | Total RTP | R (Suburbia) |
 |---|---|---|
-| A (default) | 96.0% | 92.0% |
-| B | 95.0% | 91.0% |
-| C | 94.0% | 90.0% |
-| D (premium/regulated-max) | 97.0% | 93.0% |
+| A (default) | 96.0% | 93.6% |
+| B | 95.0% | 92.6% |
+| C | 94.0% | 91.6% |
+| D (premium/regulated-max) | 97.0% | 94.6% |
 
 Each variant is a separately certified configuration; the client renders ladders from server-provided tables, so no client change is required.
 
