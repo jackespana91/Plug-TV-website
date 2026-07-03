@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗞</text></svg>" />
+    <title>Paperboy: The Run — Prototype</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topstrip">
+        <div class="brand">PAPERBOY<span>: THE RUN</span></div>
+        <div class="stats">
+          <div class="stat"><label>Delivered</label><span id="stat-delivered">–</span></div>
+          <div class="stat"><label>Side pocket</label><span id="stat-pocket" class="money">0.00</span></div>
+          <div class="stat"><label>Best run</label><span id="stat-best">–</span></div>
+          <button id="btn-mute" class="icon" title="Sound">🔊</button>
+        </div>
+      </header>
+
+      <main class="stage">
+        <canvas id="game"></canvas>
+        <div id="overlay" class="overlay hidden">
+          <div id="overlay-kicker" class="kicker"></div>
+          <div id="overlay-title" class="title"></div>
+          <div id="overlay-amount" class="amount"></div>
+          <div id="overlay-sub" class="sub"></div>
+        </div>
+        <div id="routes" class="routes">
+          <button class="route" data-route="easy-street">
+            <b>🌅 Easy Street</b><i>Sleepy cul-de-sac · slow &amp; steady</i><em></em>
+          </button>
+          <button class="route selected" data-route="suburbia">
+            <b>🏘 Suburbia</b><i>The classic paper route</i><em></em>
+          </button>
+          <button class="route" data-route="dog-alley">
+            <b>🌆 Dog Alley</b><i>Loose dogs · fast money</i><em></em>
+          </button>
+        </div>
+      </main>
+
+      <div id="ribbon" class="ribbon"></div>
+
+      <section class="controls">
+        <div class="bet">
+          <label>Bet</label>
+          <button id="bet-down">−</button>
+          <span id="bet-value" class="money">1.00</span>
+          <button id="bet-up">+</button>
+        </div>
+        <button id="btn-main" class="mainbtn deliver">
+          <span id="btn-label">DELIVER</span>
+          <span id="btn-amount"></span>
+        </button>
+        <div class="balance">
+          <label>Balance</label>
+          <span id="balance" class="money">1,000.00</span>
+          <a href="#" id="reset">reset demo</a>
+        </div>
+      </section>
+
+      <footer class="fairness">
+        Demo wallet · outcomes are fixed by the RNG the instant you press DELIVER — the run is a
+        replay of that result (<a href="../docs/paperboy/02-math-model.md">math model</a>). Target RTP 96%.
+      </footer>
+    </div>
+    <script type="module" src="/src/game/main.ts"></script>
+  </body>
+</html>

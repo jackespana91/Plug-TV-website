@@ -13,7 +13,7 @@ import {
   seededRng,
   settle,
 } from './index';
-import type { RouteConfig } from './types';
+import type { OutcomeStep, RouteConfig } from './types';
 
 const routes = Object.values(ROUTES);
 
@@ -103,7 +103,7 @@ describe('settlement (§5–§8)', () => {
       bet: 2,
       bustStep: 4,
       capStep: capStep(cfg),
-      steps: [{ k: 1 }, { k: 2 }, { k: 3 }],
+      steps: [{ k: 1 }, { k: 2 }, { k: 3 }] as OutcomeStep[],
       bigPaper: null as number | null,
     };
   }

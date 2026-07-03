@@ -14,4 +14,4 @@ Reference concept: [`concept-mockup.png`](concept-mockup.png)
 
 **Core principle threaded through all three:** the player never controls the character — a certified RNG fixes the outcome the instant DELIVER is pressed, and everything on screen is a dramatization of that result. Presentation never changes probability; probability never depends on presentation.
 
-Next step: lock this package, then build — server outcome engine first (verifiable against doc 02 alone), presentation client second.
+**Reference implementation:** [`../../paperboy/`](../../paperboy/) — the outcome engine (tested + Monte-Carlo-verified against doc 02) and a playable canvas prototype of the presentation layer. Doc 02 is at v1.1: two of its v1.0 figures were corrected after simulation caught them (see the doc's header changelog).
