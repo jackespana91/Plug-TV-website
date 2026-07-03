@@ -81,6 +81,7 @@
   #result button{border:none;border-radius:999px;padding:11px 18px;font-weight:900;font-size:13px;cursor:pointer}
   #again{background:var(--plug);color:#04140a}
   #switch{background:#1e2822;color:var(--txt);border:1px solid var(--line) !important}
+  #rReplay{margin-top:10px;background:#241d08;color:var(--gold);border:1px solid #5a4a12 !important;width:100%}
   .hidden{display:none !important}
   #foot{position:absolute;bottom:-24px;left:0;right:0;text-align:center;font-size:10px;color:#4d5f55}
 </style>
@@ -138,6 +139,7 @@
           <button id="again">PLAY AGAIN</button>
           <button id="switch">CHANGE CLUB</button>
         </div>
+        <button id="rReplay" class="hidden">🎬&nbsp;WATCH REPLAY</button>
       </div>
     </div>
     <div id="foot">Prototype · RTP 96.0% all modes · outcome is drawn by RNG at the moment you release — aim &amp; meter are presentation only</div>
@@ -200,7 +202,11 @@ const S = {
   aim:{x:GC.x, y:GC.y}, drag:null, pull:0, quality:0,
   ball:{x:TEE.x, y:TEE.y, alt:0, on:true, scale:1},
   tl:null, particles:[], rain:[],
-  outcome:null, rest:null, distM:null, riding:false, speed:1
+  outcome:null, rest:null, distM:null, riding:false, speed:1,
+  /* broadcast camera + replay */
+  camMode:'wide', cam:{x:210, y:342, z:1}, flash:0, lb:0,
+  rec:[], recT:0, replayed:false, replayT:0, replayIdx:0, replayEnd:0,
+  replayDone:null, prevOn:true, forceMult:null
 };
 
 /* ---------- rng / math ---------- */
@@ -297,13 +303,13 @@ function newRoundCosmetics(){
   S.rain.length=0;
 }
 function toClub(){
-  S.phase='club'; S.ball={x:TEE.x,y:TEE.y,alt:0,on:true,scale:1};
+  S.phase='club'; S.camMode='wide'; S.ball={x:TEE.x,y:TEE.y,alt:0,on:true,scale:1};
   $('clubs').classList.remove('hidden'); $('result').classList.add('hidden');
   $('lockAim').classList.add('hidden'); prompt('');
   newRoundCosmetics();
 }
 function toAim(){
-  S.phase='aim'; S.ball={x:TEE.x,y:TEE.y,alt:0,on:true,scale:1};
+  S.phase='aim'; S.camMode='wide'; S.ball={x:TEE.x,y:TEE.y,alt:0,on:true,scale:1};
   S.aim={x:GC.x,y:GC.y-6};
   $('clubs').classList.add('hidden'); $('result').classList.add('hidden');
   $('lockAim').classList.remove('hidden');
@@ -325,10 +331,14 @@ function swing(){
   S.balance -= S.bet; refreshHud();
 
   S.quality = Math.max(0, 1 - Math.abs(S.pull-0.85)/0.35);   // cosmetic only
-  const mult = drawOutcome(S.club);                          // ← the real result
+  const mult = S.forceMult!=null ? S.forceMult : drawOutcome(S.club); // ← the real result
+  S.forceMult = null;
   S.outcome = {mult, tier:tierFor(mult)};
   buildShot();                                               // theatre to match
   S.phase='flight';
+  $('lockAim').classList.add('hidden');
+  S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
+  cutTo('tee');                                              // broadcast: tee cam
   prompt('');
   if(S.quality>0.92) caption('PURE STRIKE!','pop');
   sHit();
@@ -340,6 +350,39 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const angTo=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
 const polar=(c,r,a)=>({x:c.x+Math.cos(a)*r, y:c.y+Math.sin(a)*r});
 const easeOut=k=>1-Math.pow(1-k,3);
+
+/* ---------- broadcast camera ----------
+   Hard cuts between virtual cameras, like TV coverage:
+   tee cam (punch-in at address) → tracking cam (follows the ball in the air)
+   → landing cam (tight on the green for bounce/roll/lip) → replay cam.
+   Identity view during club/aim/power so pointer input needs no un-projection. */
+const AY = 342;                                    // screen anchor line for the camera
+function camTarget(){
+  if(S.phase==='replay') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.5, z:2.1};
+  if((S.phase==='flight'||S.phase==='result') && S.camMode!=='wide'){
+    if(S.camMode==='tee')   return {x:TEE.x, y:TEE.y-50, z:1.5};
+    if(S.camMode==='track') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.45, z:1.18};
+    if(S.camMode==='land')  return {x:S.ball.x, y:S.ball.y, z:1.7};
+  }
+  return {x:W/2, y:AY, z:1};
+}
+function clampCam(t){
+  const z=t.z;
+  return {z,
+    x:Math.min(W-W/(2*z), Math.max(W/(2*z), t.x)),
+    y:Math.min(H-(H-AY)/z, Math.max(AY/z, t.y))};
+}
+function updateCam(dt){
+  const t=clampCam(camTarget()), k=1-Math.exp(-dt*5.5);
+  S.cam.x+=(t.x-S.cam.x)*k; S.cam.y+=(t.y-S.cam.y)*k; S.cam.z+=(t.z-S.cam.z)*k;
+}
+function cutTo(mode){                              // hard cut with a broadcast dip
+  S.camMode=mode;
+  const t=clampCam(camTarget());
+  S.cam.x=t.x; S.cam.y=t.y; S.cam.z=t.z; S.flash=0.14;
+}
+function landCam(){ if(S.phase==='flight' && S.camMode!=='land') cutTo('land'); }
+function w2s(x,y){ return {x:(x-S.cam.x)*S.cam.z+W/2, y:(y-S.cam.y)*S.cam.z+AY}; }
 
 /* pick where the ball finally rests, biased toward the player's aim */
 function restPoint(tier){
@@ -400,19 +443,25 @@ function flightSeg(from,to,h,dur,curve,opts){
     S.ball.x=i*i*from.x+2*i*k*ctrl.x+k*k*to.x;
     S.ball.y=i*i*from.y+2*i*k*ctrl.y+k*k*to.y;
     S.ball.alt=Math.sin(Math.PI*k)*h;
+    if(S.camMode==='tee' && k>0.32) S.camMode='track';   // whip to tracking cam
   },opts);
+}
+function withCam(opts, also){                            // compose cam/sfx hooks with caller's onStart
+  const o=Object.assign({},opts), user=o.onStart;
+  o.onStart=()=>{ also&&also(); user&&user(); };
+  return o;
 }
 function bounceSeg(from,to,h,dur,opts){
   return seg(dur,k=>{
     S.ball.x=lerp(from.x,to.x,k); S.ball.y=lerp(from.y,to.y,k);
     S.ball.alt=Math.sin(Math.PI*k)*h;
-  },Object.assign({onStart:sBounce},opts));
+  },withCam(opts,()=>{ sBounce(); landCam(); }));
 }
 function rollSeg(from,to,dur,opts){
   return seg(dur,k=>{
     const e=easeOut(k);
     S.ball.x=lerp(from.x,to.x,e); S.ball.y=lerp(from.y,to.y,e); S.ball.alt=0;
-  },opts);
+  },withCam(opts,landCam));
 }
 function lipSeg(turns,r0,r1,dur,opts){
   const a0=angTo(GC,S.ball);
@@ -420,13 +469,13 @@ function lipSeg(turns,r0,r1,dur,opts){
     const a=a0+turns*2*Math.PI*k, r=lerp(r0,r1,k);
     S.ball.x=GC.x+Math.cos(a)*r; S.ball.y=GC.y+Math.sin(a)*r; S.ball.alt=0;
     if(Math.random()<0.15) sLip();
-  },opts);
+  },withCam(opts,landCam));
 }
 function dropSeg(opts){
   return seg(0.38,k=>{
     S.ball.x=lerp(S.ball.x,GC.x,k*.4); S.ball.y=lerp(S.ball.y,GC.y,k*.4);
     S.ball.scale=1-k*.9; if(k>=1) S.ball.on=false;
-  },Object.assign({onStart:sDrop},opts));
+  },withCam(opts,()=>{ sDrop(); landCam(); }));
 }
 function pauseSeg(dur,opts){ return seg(dur,()=>{},opts); }
 
@@ -445,9 +494,9 @@ function firework(x,y){
 }
 function splashFx(){
   sSplash();
-  for(let i=0;i<3;i++) S.particles.push({type:'ring',x:SPLASH.x,y:SPLASH.y,age:-i*.14,life:.85,size:6,color:'rgba(220,240,255,.8)'});
+  for(let i=0;i<3;i++) S.particles.push({type:'ring',world:true,x:SPLASH.x,y:SPLASH.y,age:-i*.14,life:.85,size:6,color:'rgba(220,240,255,.8)'});
   for(let i=0;i<14;i++){ const a=Math.random()*Math.PI*2, v=25+Math.random()*70;
-    S.particles.push({type:'dot',x:SPLASH.x,y:SPLASH.y,vx:Math.cos(a)*v,vy:-40-Math.random()*70,size:2.2,color:'#bfe6ff',age:0,life:.7,g:220});
+    S.particles.push({type:'dot',world:true,x:SPLASH.x,y:SPLASH.y,vx:Math.cos(a)*v,vy:-40-Math.random()*70,size:2.2,color:'#bfe6ff',age:0,life:.7,g:220});
   }
 }
 
@@ -465,7 +514,7 @@ function buildShot(){
       segs.push(flightSeg(from,{x:lerp(from.x,SPLASH.x,.5),y:lerp(from.y,SPLASH.y,.55)},F.h,F.dur*.62,windCurve,
         {onEnd:()=>caption('GUST! 💨','small')}));
       segs.push(flightSeg({x:S.ball.x,y:S.ball.y},SPLASH,F.h*.45,F.dur*.5,60));
-      segs.push(seg(.05,()=>{},{onEnd:()=>{splashFx(); S.ball.on=false; caption('SPLASH!','pop');}}));
+      segs.push(seg(.05,()=>{},{onEnd:()=>{splashFx(); S.ball.on=false; landCam(); caption('SPLASH!','pop');}}));
       segs.push(pauseSeg(.9,{onStart:sCrowdO}));
       S.rest = SPLASH;
     }else if(v==='tree'){
@@ -565,9 +614,48 @@ function buildShot(){
   play(segs,toResult);
 }
 
+/* ---------- slow-mo replay (the shareable clip) ---------- */
+function record(dt){
+  S.recT+=dt;
+  if(S.rec.length<4000)
+    S.rec.push({t:S.recT, x:S.ball.x, y:S.ball.y, alt:S.ball.alt, sc:S.ball.scale, on:S.ball.on});
+}
+function startReplay(done){
+  if(S.rec.length<2){ done&&done(); return; }
+  let endI=S.rec.length-1;                       // trim trailing stillness
+  for(let i=S.rec.length-1;i>0;i--){
+    const a=S.rec[i], b=S.rec[i-1];
+    if(Math.hypot(a.x-b.x,a.y-b.y)>0.15 || Math.abs(a.alt-b.alt)>0.3 || a.on!==b.on){ endI=i; break; }
+  }
+  S.replayEnd=Math.min(S.rec[S.rec.length-1].t, S.rec[endI].t+0.5);
+  S.phase='replay'; S.replayT=0; S.replayIdx=0; S.replayDone=done; S.prevOn=true;
+  S.ball.on=true; S.ball.scale=1;
+  $('result').classList.add('hidden'); $('vign').classList.remove('on');
+  prompt('','');
+  cutTo('replay');
+}
+function tickReplay(dt){
+  S.replayT += dt*0.45*S.speed;                  // slow motion
+  const rec=S.rec;
+  while(S.replayIdx<rec.length-2 && rec[S.replayIdx+1].t<=S.replayT) S.replayIdx++;
+  const a=rec[S.replayIdx], b=rec[Math.min(S.replayIdx+1,rec.length-1)];
+  const f=b.t>a.t ? Math.min(1,(S.replayT-a.t)/(b.t-a.t)) : 1;
+  S.ball.x=lerp(a.x,b.x,f); S.ball.y=lerp(a.y,b.y,f);
+  S.ball.alt=lerp(a.alt,b.alt,f); S.ball.scale=lerp(a.sc,b.sc,f); S.ball.on=a.on;
+  if(S.prevOn && !a.on){ sDrop(); confetti(40,['#ffd34d','#ffffff']); }
+  S.prevOn=a.on;
+  if(S.replayT>=S.replayEnd){ const d=S.replayDone; S.replayDone=null; d&&d(); }
+}
+
 /* ---------- result ---------- */
 function toResult(){
-  S.phase='result'; S.tl=null; $('vign').classList.remove('on');
+  S.tl=null; $('vign').classList.remove('on');
+  /* hole-in-ones get an automatic broadcast replay before the result card */
+  if(S.outcome.mult>=25 && !S.replayed){ S.replayed=true; startReplay(showResult); return; }
+  showResult();
+}
+function showResult(){
+  S.phase='result';
   const o=S.outcome, win=o.mult*S.bet;
   S.balance += win; refreshHud();
   const m=$('rMult');
@@ -578,16 +666,21 @@ function toResult(){
   $('rPay').textContent = win>0 ? `WIN ${fmt(win)}` : 'No return';
   $('rDist').textContent = S.distM===null ? 'Ball is out of play'
     : S.distM===0 ? 'IN THE HOLE' : S.distM.toFixed(1)+' m from the pin';
+  $('rReplay').classList.toggle('hidden', o.mult<10);
   $('result').classList.remove('hidden');
 }
+$('rReplay').onclick=()=>startReplay(()=>{ S.phase='result'; $('result').classList.remove('hidden'); });
 
 /* ---------- input ---------- */
 function evPos(e){
   const r=cv.getBoundingClientRect();
-  return {x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height};
+  const sx=(e.clientX-r.left)*W/r.width, sy=(e.clientY-r.top)*H/r.height;
+  // un-project through the broadcast camera so input stays exact mid-zoom
+  return {x:(sx-W/2)/S.cam.z+S.cam.x, y:(sy-AY)/S.cam.z+S.cam.y};
 }
 cv.addEventListener('pointerdown',e=>{
   ac(); const p=evPos(e); cv.setPointerCapture(e.pointerId);
+  if(S.phase==='replay'){ S.replayT=S.replayEnd; return; }   // tap to skip replay
   if(S.phase==='aim'){ S.drag='aim'; setAim(p); }
   else if(S.phase==='power' && dist(p,{x:TEE.x,y:TEE.y})<90){ S.drag='power'; S.pull=0; }
 });
@@ -719,7 +812,7 @@ function drawBall(){
   }
 }
 function drawWindHud(){
-  if(S.phase==='club'||S.phase==='result') return;
+  if(S.phase==='club'||S.phase==='result'||S.phase==='replay') return;
   const x=42,y=64;
   cx.fillStyle='rgba(8,12,10,.72)';
   cx.beginPath(); cx.roundRect(x-30,y-24,74,58,12); cx.fill();
@@ -737,20 +830,49 @@ function drawParticles(dt){
     if(p.age<0) continue;
     if(p.age>p.life){ S.particles.splice(i,1); continue; }
     const k=p.age/p.life;
+    // world particles (splash) live on the course and ride the camera;
+    // celebration confetti/fireworks are screen-space.
+    const z = p.world ? S.cam.z : 1;
+    const at = p.world ? w2s(p.x,p.y) : p;
     if(p.type==='rect'){
       p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vr*dt;
-      cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
+      cx.save(); cx.translate(at.x,at.y); cx.rotate(p.rot);
       cx.globalAlpha=1-k*k; cx.fillStyle=p.color; cx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);
       cx.restore();
     }else if(p.type==='dot'){
       p.vy+=(p.g||0)*dt; p.x+=p.vx*dt; p.y+=p.vy*dt;
       cx.globalAlpha=1-k; cx.fillStyle=p.color;
-      cx.beginPath(); cx.arc(p.x,p.y,p.size,0,7); cx.fill();
+      cx.beginPath(); cx.arc(at.x,at.y,p.size*z,0,7); cx.fill();
     }else if(p.type==='ring'){
-      cx.globalAlpha=(1-k)*.8; cx.strokeStyle=p.color; cx.lineWidth=2;
-      cx.beginPath(); cx.arc(p.x,p.y,p.size+k*34,0,7); cx.stroke();
+      cx.globalAlpha=(1-k)*.8; cx.strokeStyle=p.color; cx.lineWidth=2*z;
+      cx.beginPath(); cx.arc(at.x,at.y,(p.size+k*34)*z,0,7); cx.stroke();
     }
     cx.globalAlpha=1;
+  }
+}
+function drawCinema(dt){
+  /* letterbox bars during live coverage; deeper bars + bug during replay */
+  const target = S.phase==='replay' ? 46 : S.phase==='flight' ? 24 : 0;
+  S.lb += (target-S.lb)*(1-Math.exp(-dt*8));
+  if(S.lb>0.5){
+    cx.fillStyle='#000';
+    cx.fillRect(0,0,W,S.lb); cx.fillRect(0,H-S.lb,W,S.lb);
+  }
+  if(S.phase==='replay'){
+    if(Math.sin(performance.now()/280)>0){
+      cx.fillStyle='#ff4040'; cx.beginPath(); cx.arc(20,H-S.lb-16,4,0,7); cx.fill();
+    }
+    cx.fillStyle='#fff'; cx.font='800 12px sans-serif'; cx.textAlign='left';
+    cx.fillText('REPLAY · SLO-MO', 32, H-S.lb-12);
+    cx.fillStyle='rgba(255,255,255,.85)'; cx.font='italic 900 12px sans-serif'; cx.textAlign='right';
+    cx.fillText('PLUG TV', W-16, H-S.lb-12);
+    cx.fillStyle='rgba(255,255,255,.5)'; cx.font='600 9px sans-serif';
+    cx.fillText('tap to skip', W-16, S.lb+14);
+  }
+  if(S.flash>0){                                   // cut dip
+    S.flash=Math.max(0,S.flash-dt);
+    cx.fillStyle='rgba(0,0,0,'+(S.flash/0.14*0.8).toFixed(3)+')';
+    cx.fillRect(0,0,W,H);
   }
 }
 function drawWeather(dt){
@@ -764,7 +886,7 @@ function drawWeather(dt){
     cx.stroke();
   }
   if(th.tint){ cx.fillStyle=th.tint; cx.fillRect(0,0,W,H); }
-  if(S.phase!=='club'){
+  if(S.phase!=='club' && S.phase!=='replay'){
     cx.fillStyle='rgba(255,255,255,.55)'; cx.font='600 10px sans-serif'; cx.textAlign='right';
     cx.fillText(th.name.toUpperCase(), W-14, 64);
   }
@@ -774,14 +896,22 @@ function drawWeather(dt){
 let last=performance.now();
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
-  tickTL(dt);
+  if(S.phase==='replay') tickReplay(dt); else tickTL(dt);
+  if(S.phase==='flight') record(dt);
+  updateCam(dt);
+  // world pass, through the broadcast camera
+  cx.save();
+  cx.translate(W/2,AY); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
   drawCourse();
   drawAimUI();
   drawPowerUI();
   drawBall();
+  cx.restore();
+  // screen pass: HUD, particles, weather, cinema bars
   drawWindHud();
   drawParticles(dt);
   drawWeather(dt);
+  drawCinema(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -790,8 +920,9 @@ toClub();
 /* ---------- debug / automated-test hooks ---------- */
 window.__plug = {
   S, CFG, drawOutcome, tierFor,
-  autoShot(club, speed){
+  autoShot(club, speed, forceMult){
     S.speed = speed||6; S.club = club||'driver';
+    if(forceMult!=null) S.forceMult = forceMult;
     $('clubs').classList.add('hidden'); $('result').classList.add('hidden');
     toAim(); S.aim = polar(GC, 20, Math.random()*7); S.pull = .85; swing();
     return new Promise(res=>{

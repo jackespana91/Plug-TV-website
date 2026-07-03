@@ -130,6 +130,22 @@ glow ball / Rain with particles — pure tint, zero RTP effect), cosmetic wind H
 waving flag, synthesized SFX (strike, bounce, splash, crowd, cup-drop, fanfare) with
 mute toggle, and a stripes-and-shadows broadcast-style course render.
 
+### 5.1 Broadcast camera & replay (implemented)
+
+TV-coverage presentation on top of the story timeline:
+
+- **Camera cuts.** Virtual cameras with hard cuts and a broadcast "dip": tee cam
+  punch-in at address → whip to a tracking cam that follows the ball in the air →
+  cut to a tight landing cam for the bounce/roll/lip. Letterbox bars slide in during
+  live coverage. The view is identity during club/aim/power, and pointer input is
+  un-projected through the camera, so aiming stays pixel-exact.
+- **Slow-mo replay.** Every shot is recorded (ball state per frame). Hole-in-ones
+  (25x+) automatically get a broadcast replay — 0.45x speed, 2.1x zoom, deep
+  letterbox, blinking "● REPLAY · SLO-MO" bug and a PLUG TV watermark — before the
+  result card lands. Any 10x+ result carries a 🎬 WATCH REPLAY button for rewatching;
+  tap anywhere to skip. This is the shareable-clip surface: a screen-record of the
+  replay IS the marketing asset.
+
 ## 6. Feature roadmap **[roadmap]**
 
 - **Lucky Bounce** — rare cosmetic deflections (cart path, rock, spectator sign,
@@ -144,8 +160,8 @@ mute toggle, and a stripes-and-shadows broadcast-style course render.
   exclusive course with the 100x table), mirroring slot bonus-buy economics.
 - **Progression** — legendary clubs, ball skins, swing trails, crowd celebrations,
   carts, player intros, course themes. All cosmetic, all 0-RTP, all retention.
-- **Broadcast presentation pass** — cinematic camera cuts (tee cam → blimp cam →
-  green cam), slow-mo replays of 10x+ shots with a "share clip" button.
+- **Share clip export** — the camera cuts and slow-mo replay are in (§5.1); the
+  remaining piece is one-tap export of the replay as a video/GIF for socials.
 
 ## 7. Running the prototype
 
