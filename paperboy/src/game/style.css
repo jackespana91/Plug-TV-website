@@ -87,9 +87,13 @@ canvas { display: block; width: 100%; height: auto; background: #2E4482; }
 .ribbon::-webkit-scrollbar { display: none; }
 .rung {
   flex: 0 0 auto; min-width: 62px; text-align: center; padding: 6px 8px;
-  border-radius: 9px; border: 1px solid var(--edge);
+  border-radius: 9px; border: 1px solid var(--edge); cursor: pointer;
   font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text2);
+  transition: border-color 0.15s, transform 0.15s;
 }
+.rung:hover { border-color: var(--text2); }
+.rung.target { color: var(--gold); border-color: var(--gold); background: rgba(255,197,61,0.08);
+  transform: scale(1.06); }
 .rung small { display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.05em; }
 .rung.done { color: var(--text); background: rgba(61,220,107,0.08); border-color: rgba(61,220,107,0.35); }
 .rung.current { color: var(--green); border-color: var(--green); background: var(--green-bg);

@@ -12,6 +12,7 @@ import {
   ladderMultiplier,
   seededRng,
   settle,
+  settleAtTarget,
 } from './index';
 import type { OutcomeStep, RouteConfig } from './types';
 
@@ -161,6 +162,25 @@ describe('settlement (§5–§8)', () => {
     expect(r.busted).toBe(false);
     expect(r.capped).toBe(true);
     expect(r.multiplier).toBe(cfg.maxWin);
+  });
+
+  it('settles pre-committed targets: pays the target rung when reached, busts otherwise', () => {
+    const s = scriptWith({}); // survives steps 1..3, bust at 4
+    const win = settleAtTarget(s, cfg, 2);
+    expect(win.busted).toBe(false);
+    expect(win.multiplier).toBeCloseTo(ladderMultiplier(cfg, 2), 10);
+    const loss = settleAtTarget(s, cfg, 5);
+    expect(loss.busted).toBe(true);
+    expect(loss.ladderWin).toBe(0);
+    expect(loss.survived).toBe(3);
+    // targets past the cap clamp to the cap rung
+    const cap = capStep(cfg);
+    const deep = scriptWith({
+      bustStep: cap + 1,
+      steps: Array.from({ length: cap }, (_, i) => ({ k: i + 1 })),
+    });
+    expect(settleAtTarget(deep, cfg, cap + 500).multiplier).toBe(cfg.maxWin);
+    expect(() => settleAtTarget(s, cfg, 0)).toThrow();
   });
 
   it('rejects illegal cash-out steps', () => {

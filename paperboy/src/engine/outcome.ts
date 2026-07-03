@@ -68,6 +68,26 @@ export function effectiveMultiplier(script: OutcomeScript, cfg: RouteConfig, k: 
 }
 
 /**
+ * Platform-canonical settlement for a pre-committed target (math doc §8.5).
+ *
+ * RGS platforms with no in-round input (e.g. Stake Engine) resolve the whole
+ * bet at draw time: the player commits to a target house BEFORE the run, and
+ * the round pays the target rung if the draw reaches it, else busts. Targets
+ * beyond the cap clamp to the cap rung.
+ */
+export function settleAtTarget(
+  script: OutcomeScript,
+  cfg: RouteConfig,
+  targetStep: number,
+): Settlement {
+  if (!Number.isInteger(targetStep) || targetStep < 1) {
+    throw new Error(`illegal target step ${targetStep}`);
+  }
+  const goal = Math.min(targetStep, script.capStep);
+  return settle(script, cfg, script.bustStep - 1 >= goal ? goal : null);
+}
+
+/**
  * Settle the round for a cash-out decision.
  *
  * @param cashoutStep step after which the player banked, or null if they rode

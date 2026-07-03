@@ -340,4 +340,17 @@ Multiplayer shared runs, real skill input, tournaments, jackpot pooling, and the
 
 ---
 
+## 20. Platform Addendum — Committed-Target Mode ("Plant the Flag")
+
+RGS platforms with no in-round input (e.g. **Stake Engine**) cannot support §3's live cash-out: the entire round, payout included, is resolved the moment the bet is placed, and the client is pure playback. On such platforms — our primary launch target — the player's decision moves *in front of* the bet (math doc §8.5):
+
+- **Plant the flag.** Before betting, the player taps a rung on the multiplier ribbon to choose their target house. The chosen house gets a golden pennant in the world and a 🚩 on the ribbon; the DELIVER button quotes the exact payout for reaching it. Route + flag + stake *is* the bet.
+- **The run is a straight ride** to the flag or the bust — no decision windows, no mid-run slow-down asking a question. House-to-house pacing tightens accordingly (a short breath between deliveries instead of a 1.2s window).
+- **Tension moves to the flag approach.** The last house before the flag is always staged as a dramatic hazard beat (the near-miss grammar of §9), because that is where the player's heart already is. Mid-run deliveries still tick the ladder so the player watches their committed win grow more real house by house.
+- **Losses are measured in distance:** "Caught at house 7 — 2 short of the flag." Near-loss framing rules from §13 still apply: the bust itself is never staged as an almost-win; the *distance* line states a fact, once, and the next run is one tap away.
+- **What's unchanged:** everything else — hazard grammar, collectibles, Daily Big Paper, Perfect Run celebration, celebrations, audio, session flow. The presentation layer was always a replayer of a pre-determined script; this mode just removes the one input it accepted mid-run.
+- The §3 live cash-out design is retained in this document as the variant for platforms that do support in-round decisions.
+
+---
+
 *Next: `02-math-model.md` — the mathematical model that this presentation layer will dramatize.*

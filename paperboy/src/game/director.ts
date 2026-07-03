@@ -1,15 +1,17 @@
 /**
- * The run director — GDD §3, §6, §9; math doc §8.
+ * The run director — GDD §3/§20, §6, §9; math doc §8/§8.5.
  *
  * Performs a pre-determined OutcomeScript as a timed sequence of beats.
- * The director reads the script; it never draws from the outcome RNG and
- * never computes value beyond calling the engine's settle(). Cash-out is
- * only accepted during decision windows (GDD §3.1 step 4) — window expiry
- * commits the player to the next step.
+ * Committed-target mode (Stake-Engine-style RGS): the player plants a flag
+ * at a target house BEFORE betting; the whole round — including the payout —
+ * is resolved at draw time and the run is pure playback to the flag or the
+ * bust, with no in-round input. The director reads the script; it never
+ * draws from the outcome RNG and never computes value beyond the engine's
+ * settleAtTarget().
  */
 import {
   effectiveMultiplier,
-  settle,
+  settleAtTarget,
   type OutcomeScript,
   type RouteConfig,
   type Settlement,
@@ -44,9 +46,6 @@ export class Clock {
 }
 
 export interface DirectorUi {
-  /** Decision window opened after delivery k — CASH OUT arms with this preview total. */
-  onDecision(k: number, previewTotal: number): void;
-  onDecisionEnd(): void;
   onDelivered(k: number, multiplier: number, previewTotal: number): void;
   onSidePocket(total: number): void;
   onBigPaper(amount: number): Promise<void>;
@@ -66,19 +65,12 @@ const HAZARD_SOUND: Record<HazardKind, () => void> = {
 export class Director {
   readonly clock = new Clock();
   running = false;
-  private cashResolver: ((v: 'cash') => void) | null = null;
 
   constructor(
     private world: World,
     private scene: Scene,
     private ui: DirectorUi,
   ) {}
-
-  /** Called by the UI. Only honored while a decision window is open. */
-  requestCashOut(): void {
-    this.cashResolver?.('cash');
-    this.cashResolver = null;
-  }
 
   /** Advance continuous world state each frame (scaled dt, seconds). */
   update(dt: number): void {
@@ -94,24 +86,28 @@ export class Director {
     if (w.speed > 0 && Math.random() < dt * (w.speed / 90)) sfx.chainTick();
   }
 
-  async perform(script: OutcomeScript, cfg: RouteConfig): Promise<void> {
+  async perform(script: OutcomeScript, cfg: RouteConfig, targetStep: number): Promise<void> {
     const w = this.world;
     this.running = true;
     w.pose = 'ride';
     w.poseT = 0;
     w.multiplier = null;
     w.scrollX = HOUSE_SPACING - DELIVER_X - 520;
+    const goal = Math.min(targetStep, script.capStep);
+    w.targetHouse = goal;
     let sidePocket = 0;
     let bigPaperShown = 0;
 
     const survivable = script.bustStep - 1;
-    const reachedCap = survivable >= script.capStep;
+    const reached = survivable >= goal;
     const preview = (k: number) =>
       effectiveMultiplier(script, cfg, k) * script.bet + sidePocket + bigPaperShown;
 
     try {
-      for (let k = 1; k <= survivable; k++) {
-        await this.approach(script, k, /*fatal*/ false);
+      const lastDelivered = Math.min(goal, survivable);
+      for (let k = 1; k <= lastDelivered; k++) {
+        const isFlagHouse = k === goal;
+        await this.approach(script, k, /*fatal*/ false, isFlagHouse);
         const step = script.steps[k - 1];
 
         // — deliver —
@@ -162,34 +158,20 @@ export class Director {
           bigPaperShown = script.bigPaper * script.bet;
           await this.ui.onBigPaper(bigPaperShown);
         }
+        // brief breath between houses (replaces the decision window: no input)
+        if (!isFlagHouse) await this.clock.wait(250);
+      }
 
-        // — forced cash-out at the cap (§2: bustStep > capStep encodes cap) —
-        if (k === script.capStep && reachedCap) {
-          const s = settle(script, cfg, null);
-          await this.celebrate(s, cfg);
-          return;
-        }
-
-        // — decision window (GDD §3.1 step 4: ~1.2s, world at 95%) —
-        this.clock.scale = 0.95;
-        this.ui.onDecision(k, preview(k));
-        const choice = await Promise.race([
-          this.clock.wait(1200).then(() => 'ride' as const),
-          new Promise<'cash'>((res) => (this.cashResolver = res)),
-        ]);
-        this.cashResolver = null;
-        this.clock.scale = 1;
-        this.ui.onDecisionEnd();
-        if (choice === 'cash') {
-          const s = settle(script, cfg, k);
-          await this.celebrate(s, cfg);
-          return;
-        }
+      if (reached) {
+        // — the flag —
+        const s = settleAtTarget(script, cfg, goal);
+        await this.celebrate(s, cfg);
+        return;
       }
 
       // — the bust —
-      await this.approach(script, script.bustStep, /*fatal*/ true);
-      const s = settle(script, cfg, null);
+      await this.approach(script, script.bustStep, /*fatal*/ true, false);
+      const s = settleAtTarget(script, cfg, goal);
       w.multiplier = null;
       w.pose = 'tumble';
       w.poseT = 0;
@@ -209,11 +191,17 @@ export class Director {
 
   /**
    * Ride to house k. On survived steps a hazard-escape beat plays ~half the
-   * time (always with `dramatic` slow-mo when the script flags it); the bust
+   * time (always with `dramatic` slow-mo when the script flags it, and always
+   * on the approach to the flag house — the last-gasp beat); the bust
    * approach uses the identical telegraph grammar resolved fatally.
    * (See presentation.ts header for the §8-rule-3 production note.)
    */
-  private async approach(script: OutcomeScript, k: number, fatal: boolean): Promise<void> {
+  private async approach(
+    script: OutcomeScript,
+    k: number,
+    fatal: boolean,
+    flagHouse: boolean,
+  ): Promise<void> {
     const w = this.world;
     const target = k * HOUSE_SPACING - DELIVER_X;
     const cruise = Math.min(430, 260 + k * 6); // speed ramp, GDD §6
@@ -221,7 +209,7 @@ export class Director {
     w.speed = ((target - w.scrollX) / durMs) * 1000;
 
     const step = fatal ? undefined : script.steps[k - 1];
-    const dramatic = !!step?.dramatic;
+    const dramatic = !!step?.dramatic || flagHouse;
     const beat = fatal || dramatic || chance(0.45);
     if (!beat) {
       await this.clock.wait(durMs);

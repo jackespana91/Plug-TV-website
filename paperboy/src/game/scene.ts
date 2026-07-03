@@ -60,13 +60,15 @@ export interface World {
   zoom: number;
   paperArc: { t: number; targetX: number; targetY: number; golden: boolean } | null;
   popups: Popup[];
+  /** House index the player committed to before the run (the flag), or null. */
+  targetHouse: number | null;
 }
 
 export function newWorld(): World {
   return {
     scrollX: 0, speed: 0, pose: 'idle', poseT: 0, bob: 0,
     hazard: null, multiplier: null, vignette: 0, zoom: 1,
-    paperArc: null, popups: [],
+    paperArc: null, popups: [], targetHouse: null,
   };
 }
 
@@ -192,7 +194,9 @@ export class Scene {
     // houses (parallax 1.0)
     const first = Math.floor(w.scrollX / HOUSE_SPACING) - 1;
     const last = Math.floor((w.scrollX + VIEW_W) / HOUSE_SPACING) + 1;
-    for (let i = first; i <= last; i++) this.drawHouse(g, i, i * HOUSE_SPACING - w.scrollX);
+    for (let i = first; i <= last; i++) {
+      this.drawHouse(g, i, i * HOUSE_SPACING - w.scrollX, i === w.targetHouse);
+    }
     // sidewalk
     g.fillStyle = '#B8AFA4';
     g.fillRect(0, GROUND_Y - 40, VIEW_W, 14);
@@ -210,7 +214,7 @@ export class Scene {
     }
   }
 
-  private drawHouse(g: CanvasRenderingContext2D, i: number, x: number): void {
+  private drawHouse(g: CanvasRenderingContext2D, i: number, x: number, isTarget = false): void {
     const siding = SIDINGS[Math.floor(hash01(i, 1) * SIDINGS.length)];
     const roof = ROOFS[Math.floor(hash01(i, 2) * ROOFS.length)];
     const hw = 190, hh = 120 + hash01(i, 3) * 30;
@@ -250,6 +254,27 @@ export class Scene {
     // picket fence between lots
     g.fillStyle = 'rgba(244,241,232,0.85)';
     for (let f = 0; f < 5; f++) g.fillRect(x + hw + 60 + f * 14, GROUND_Y - 62, 6, 20);
+    // the flag — the player's pre-committed target house (GDD §20)
+    if (isTarget) {
+      const glow = g.createRadialGradient(x + hw / 2, baseY - hh / 2, 8, x + hw / 2, baseY - hh / 2, hw);
+      glow.addColorStop(0, 'rgba(255,197,61,0.28)');
+      glow.addColorStop(1, 'rgba(255,197,61,0)');
+      g.fillStyle = glow;
+      g.fillRect(x - hw / 2, baseY - hh - 70, hw * 2, hh + 90);
+      g.strokeStyle = '#F4F1E8';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(x + hw / 2, baseY - hh - 52);
+      g.lineTo(x + hw / 2, baseY - hh - 96);
+      g.stroke();
+      g.fillStyle = '#FFC53D';
+      g.beginPath();
+      g.moveTo(x + hw / 2, baseY - hh - 96);
+      g.lineTo(x + hw / 2 + 34, baseY - hh - 87);
+      g.lineTo(x + hw / 2, baseY - hh - 78);
+      g.closePath();
+      g.fill();
+    }
   }
 
   private drawRider(g: CanvasRenderingContext2D, w: World, dt: number): void {

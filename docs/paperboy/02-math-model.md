@@ -196,6 +196,30 @@ The server resolves the round into a compact script; the client dramatizes it. E
 
 ---
 
+## 8.5 Fully Pre-Determined Mode — Committed Target ("Plant the Flag")
+
+Some RGS platforms (notably **Stake Engine**) accept **no in-round player input**: the math layer returns a complete, final outcome — payout included — at bet time, and the client is pure playback. Live cash-out is impossible on such platforms. This mode is therefore the **primary launch mode**; the live-cash-out construction elsewhere in this document remains valid for platforms that support it.
+
+**Mechanic.** The player commits to a target rung **T** *before* betting (tap a rung on the ladder ribbon — "plant the flag"). The bet is the triple (route, T, stake). Settlement:
+
+```
+payout = m(T)·bet   if bustStep − 1 ≥ T      (the run reaches the flag)
+       = 0 ladder   otherwise                 (busts short of the flag)
++ envelopes accrued over steps 1 … min(T, bustStep−1)
++ Daily Big Paper (unconditional, §6)
+```
+
+Targets beyond the cap clamp to the cap rung. Reference implementation: `settleAtTarget()` in `paperboy/src/engine/outcome.ts`.
+
+**Math consequences — all favorable:**
+
+1. The ladder construction is unchanged: `E[ladder return | target T] = m(T)·p^T = R` for every T. Every (route, target) pair has the same ladder RTP.
+2. **All strategy-dependence disappears.** The §5.1 envelope depth-accrual and any §7-style feature stop being functions of in-round behavior — they are functions of the *committed* T, fixed at bet time. Each (route, T) pair has a single, exact, publishable RTP: `RTP(T) = R + π_e·v_e·Σ_{k=1..T} p^k + t·E[P]`, ranging from ~94.8% (T=1) to ~96.0% (deep T) on Suburbia. A per-target RTP table goes in the certification pack and help screen.
+3. **RGS book mapping is 1:1.** Our `OutcomeScript` is exactly a book entry: the math layer (or a pre-simulated book generated from it) yields `{steps, bustStep, bigPaper, payout}`; the RGS draws an entry per bet; the web client replays it. The §8 presentation-compliance rules apply unchanged — with one improvement: since no input exists mid-run, the client knowing the future can no longer be *acted on* by the player, reducing rule 3 from a fairness requirement to a pure no-spoiler staging rule.
+4. Free bet / bonus-engine integration is trivial because every bet has a fixed, known outcome distribution at commit time.
+
+**Presentation consequences** (GDD §20): the decision-window tension is replaced by *flag-approach* tension — the last house before the flag is always staged as a dramatic beat, and losses read as "caught N short of the flag."
+
 ## 9. Configurability
 
 RTP variants are produced by scaling the ladder constant only (feature parameters fixed):

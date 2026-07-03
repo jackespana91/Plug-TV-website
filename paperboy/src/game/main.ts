@@ -1,6 +1,9 @@
 /**
- * UI shell + demo wallet. All value math lives in the engine; this file
- * moves DOM around and forwards button presses to the director.
+ * UI shell + demo wallet — committed-target mode (math doc §8.5).
+ *
+ * The player plants a flag on the rung ribbon BEFORE betting; DELIVER
+ * resolves the whole round at draw time and the run is pure playback.
+ * All value math lives in the engine; this file moves DOM around.
  */
 import './style.css';
 import {
@@ -26,6 +29,7 @@ let balance = Number(localStorage.getItem('pb_balance') ?? 1000);
 let best = Number(localStorage.getItem('pb_best') ?? 0);
 let betIndex = 3; // 1.00
 let routeId: RouteId = 'suburbia';
+let targetStep = rungFor(ROUTES[routeId], 2);
 let boostSoFar = 1;
 let deliveredNow = 0;
 
@@ -38,15 +42,26 @@ function save(): void {
   localStorage.setItem('pb_best', String(best));
 }
 
+function routeCfg(): RouteConfig {
+  return ROUTES[routeId];
+}
+
+function rungFor(cfg: RouteConfig, target: number): number {
+  let k = 1;
+  while (ladderMultiplier(cfg, k) < target) k++;
+  return k;
+}
+
+function targetPayout(): number {
+  const cfg = routeCfg();
+  return Math.min(ladderMultiplier(cfg, targetStep), cfg.maxWin) * BET_STEPS[betIndex];
+}
+
 function renderStatics(): void {
   $('#balance').textContent = fmt(balance);
   $('#bet-value').textContent = fmt(BET_STEPS[betIndex]);
   $('#stat-best').textContent = best > 0 ? `×${best.toFixed(2)}` : '–';
   $('#stat-delivered').textContent = deliveredNow > 0 ? String(deliveredNow) : '–';
-}
-
-function routeCfg(): RouteConfig {
-  return ROUTES[routeId];
 }
 
 /* ---- route cards ---- */
@@ -55,18 +70,16 @@ for (const card of document.querySelectorAll<HTMLButtonElement>('.route')) {
   card.querySelector('em')!.textContent =
     `×2 @ house ${rungFor(cfg, 2)} · ×10 @ house ${rungFor(cfg, 10)} · max ×${cfg.maxWin.toLocaleString()}`;
   card.addEventListener('click', () => {
+    if (director.running) return;
     routeId = cfg.id;
+    targetStep = rungFor(cfg, 2);
     document.querySelectorAll('.route').forEach((c) => c.classList.toggle('selected', c === card));
     buildRibbon();
+    armDeliver();
   });
 }
-function rungFor(cfg: RouteConfig, target: number): number {
-  let k = 1;
-  while (ladderMultiplier(cfg, k) < target) k++;
-  return k;
-}
 
-/* ---- rung ribbon ---- */
+/* ---- rung ribbon: tap a rung to plant the flag ---- */
 function buildRibbon(): void {
   const cfg = routeCfg();
   const ribbon = $('#ribbon');
@@ -76,6 +89,12 @@ function buildRibbon(): void {
     const div = document.createElement('div');
     div.className = 'rung';
     div.dataset.k = String(k);
+    div.addEventListener('click', () => {
+      if (director.running) return;
+      targetStep = k;
+      paintRibbon(0);
+      armDeliver();
+    });
     ribbon.appendChild(div);
   }
   paintRibbon(0);
@@ -85,21 +104,27 @@ function paintRibbon(current: number): void {
   for (const el of document.querySelectorAll<HTMLElement>('.rung')) {
     const k = Number(el.dataset.k);
     const mult = Math.min(ladderMultiplier(cfg, k) * boostSoFar, cfg.maxWin);
-    el.innerHTML = `×${mult >= 100 ? mult.toFixed(0) : mult.toFixed(2)}<small>H${k}</small>`;
+    const flag = k === targetStep ? ' 🚩' : '';
+    el.innerHTML = `×${mult >= 100 ? mult.toFixed(0) : mult.toFixed(2)}<small>H${k}${flag}</small>`;
     el.classList.toggle('done', k < current);
     el.classList.toggle('current', k === current);
+    el.classList.toggle('target', k === targetStep);
     el.classList.toggle('boosted', boostSoFar > 1 && k >= current);
-    if (k === current) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const focus = current > 0 ? current : targetStep;
+    if (k === focus) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
 }
 
 /* ---- primary button ---- */
-type BtnState = 'deliver' | 'cashout' | 'locked';
+type BtnState = 'deliver' | 'locked';
 function setBtn(state: BtnState, label: string, amount = ''): void {
   const btn = $('#btn-main');
   btn.className = `mainbtn ${state}`;
   $('#btn-label').textContent = label;
   $('#btn-amount').textContent = amount;
+}
+function armDeliver(): void {
+  setBtn('deliver', 'DELIVER', `flag at H${targetStep} pays ${fmt(targetPayout())}`);
 }
 
 /* ---- overlay ---- */
@@ -140,16 +165,10 @@ function countUp(total: number, ms: number): Promise<void> {
 
 /* ---- director wiring ---- */
 const ui: DirectorUi = {
-  onDecision(_k, preview) {
-    setBtn('cashout', 'CASH OUT', fmt(preview));
-    sfx.decisionTick();
-  },
-  onDecisionEnd() {
-    if (director.running) setBtn('locked', 'RIDING…');
-  },
-  onDelivered(k, _mult, _preview) {
+  onDelivered(k, _mult, preview) {
     deliveredNow = k;
     $('#stat-delivered').textContent = String(k);
+    setBtn('locked', `H${k} OF H${targetStep}`, `riding on ${fmt(preview)}`);
     paintRibbon(k);
   },
   onSidePocket(total) {
@@ -183,18 +202,17 @@ async function finishRound(s: Settlement, perfectRun: boolean): Promise<void> {
     const consolation = s.total > 0 ? ` · kept ${fmt(s.total)} in side prizes` : '';
     showOverlay('WIPED OUT', 'CAUGHT!', {
       loss: true,
-      sub: `Caught at house ${s.survived + 1} · run paid ${fmt(s.ladderWin)}${consolation}`,
+      sub: `Caught at house ${s.survived + 1}, ${targetStep - s.survived} short of the flag${consolation}`,
     });
     await new Promise((r) => setTimeout(r, 1400)); // losses are fast — GDD §13
   } else {
     const tier =
-      s.capped ? 'LEGENDARY — MAX WIN' :
       s.multiplier >= 200 ? 'EPIC WIN' :
       s.multiplier >= 50 ? 'HUGE WIN' :
       s.multiplier >= 10 ? 'BIG WIN' :
-      s.multiplier >= 2 ? 'GREAT RUN' : 'BANKED';
+      s.multiplier >= 2 ? 'GREAT RUN' : 'FLAG REACHED';
     showOverlay(
-      perfectRun ? 'PERFECT RUN' : 'CASHED OUT',
+      perfectRun ? 'PERFECT RUN' : 'MADE IT!',
       tier,
       { amount: '0.00', sub: `×${s.multiplier.toFixed(2)} after ${s.survived} deliveries` },
     );
@@ -210,9 +228,10 @@ async function finishRound(s: Settlement, perfectRun: boolean): Promise<void> {
   paintRibbon(0);
   world.pose = 'idle';
   world.multiplier = null;
+  world.targetHouse = null;
   $('.controls').classList.remove('running');
   $('#routes').classList.remove('hidden');
-  setBtn('deliver', 'DELIVER', fmt(BET_STEPS[betIndex]));
+  armDeliver();
 }
 
 async function startRound(): Promise<void> {
@@ -223,33 +242,30 @@ async function startRound(): Promise<void> {
   renderStatics();
   $('.controls').classList.add('running');
   $('#routes').classList.add('hidden');
-  setBtn('locked', 'RIDING…');
-  // The outcome is fixed HERE. Everything after is theatre. (math doc §1)
+  setBtn('locked', `TO HOUSE ${targetStep}`, `for ${fmt(targetPayout())}`);
+  // The outcome — including the payout — is fixed HERE. Everything after
+  // is playback. (math doc §1, §8.5)
   const script = generateRound(routeCfg(), bet, cryptoRng());
-  await director.perform(script, routeCfg());
+  await director.perform(script, routeCfg(), targetStep);
 }
 
 /* ---- controls ---- */
-$('#btn-main').addEventListener('click', () => {
-  if (director.running) director.requestCashOut();
-  else void startRound();
-});
+$('#btn-main').addEventListener('click', () => void startRound());
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
-    if (director.running) director.requestCashOut();
-    else void startRound();
+    void startRound();
   }
 });
 $('#bet-down').addEventListener('click', () => {
   betIndex = Math.max(0, betIndex - 1);
   renderStatics();
-  setBtn('deliver', 'DELIVER', fmt(BET_STEPS[betIndex]));
+  armDeliver();
 });
 $('#bet-up').addEventListener('click', () => {
   betIndex = Math.min(BET_STEPS.length - 1, betIndex + 1);
   renderStatics();
-  setBtn('deliver', 'DELIVER', fmt(BET_STEPS[betIndex]));
+  armDeliver();
 });
 $('#btn-mute').addEventListener('click', () => {
   sfx.setMuted(!sfx.isMuted());
@@ -276,5 +292,5 @@ function frame(now: number): void {
 
 buildRibbon();
 renderStatics();
-setBtn('deliver', 'DELIVER', fmt(BET_STEPS[betIndex]));
+armDeliver();
 requestAnimationFrame(frame);
