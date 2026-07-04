@@ -36,18 +36,18 @@ interface SpriteSheet {
 }
 
 const SPRITE_DEFS: Record<SpritePose, { frames: number; frameW: number; frameH: number }> = {
-  idle: { frames: 1, frameW: 137, frameH: 194 },
-  ride: { frames: 7, frameW: 169, frameH: 203 },
-  throw: { frames: 6, frameW: 185, frameH: 195 },
-  wheelie: { frames: 1, frameW: 182, frameH: 186 },
-  tuck: { frames: 5, frameW: 179, frameH: 165 },
-  skid: { frames: 4, frameW: 205, frameH: 134 },
-  tumble: { frames: 6, frameW: 531, frameH: 164 },
-  crashed: { frames: 1, frameW: 233, frameH: 153 },
+  idle: { frames: 1, frameW: 909, frameH: 1826 },
+  ride: { frames: 8, frameW: 387, frameH: 768 },
+  throw: { frames: 6, frameW: 486, frameH: 916 },
+  wheelie: { frames: 7, frameW: 437, frameH: 915 },
+  tuck: { frames: 5, frameW: 612, frameH: 1163 },
+  skid: { frames: 6, frameW: 505, frameH: 839 },
+  tumble: { frames: 8, frameW: 383, frameH: 580 },
+  crashed: { frames: 1, frameW: 1674, frameH: 1705 },
 };
 
 /** Bottom margin (px, native res) baked into every sheet when it was built. */
-const SPRITE_ANCHOR_MARGIN = 6;
+const SPRITE_ANCHOR_MARGIN = 4;
 /** Scales the sheets' native pixel size down to the game's on-screen rider size (~90px tall for `ride`). */
 const SPRITE_SCALE = 90 / SPRITE_DEFS.ride.frameH;
 
@@ -1136,6 +1136,8 @@ export class Scene {
       frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.28) * sheet.frames));
     } else if (w.pose === 'skid') {
       frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.5) * sheet.frames));
+    } else if (w.pose === 'wheelie') {
+      frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.7) * sheet.frames));
     } else if (w.pose === 'tumble') {
       if (w.poseT >= 0.6) {
         sheet = this.sprites.crashed;
@@ -1143,7 +1145,7 @@ export class Scene {
         frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.6) * sheet.frames));
       }
     }
-    // idle, wheelie: single-frame sheets, frameIndex stays 0
+    // idle: single-frame sheet, frameIndex stays 0
 
     if (!sheet.loaded) return;
 

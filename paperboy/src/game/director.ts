@@ -272,6 +272,7 @@ export class Director {
       w.hazard.phase = 'escaped';
       w.hazard.t = 0;
       w.pose = kind === 'skateboard' ? 'wheelie' : 'ride';
+      w.poseT = 0;
       await this.clock.wait(durMs * 0.1);
       w.pose = 'ride';
     }
