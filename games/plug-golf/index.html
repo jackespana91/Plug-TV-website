@@ -905,30 +905,50 @@ function drawCourse(){
   cx.save(); cx.globalAlpha=.04; cx.fillStyle='#fff';
   for(let y=0;y<H;y+=54) cx.fillRect(0,y,W,26);
   cx.globalAlpha=1; cx.restore();
-  // the lake
-  roundRectPath(LAKE.x-6,LAKE.y-4,LAKE.w+12,LAKE.h+8,LAKE.r+6); cx.fillStyle='#17568f'; cx.fill();
-  roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r);            cx.fillStyle='#1f6fb8'; cx.fill();
-  cx.save(); cx.globalAlpha=.10; cx.fillStyle='#fff';
-  for(let i=0;i<6;i++){ cx.beginPath(); cx.ellipse(64+i*58, 96+((i%2)*44), 30,9,0,0,7); cx.fill(); }
+  // the lake — layered depth + animated shimmer
+  const tSec=performance.now()/1000;
+  roundRectPath(LAKE.x-7,LAKE.y-5,LAKE.w+14,LAKE.h+10,LAKE.r+7); cx.fillStyle='#0f4a80'; cx.fill(); // deep edge
+  const wg=cx.createLinearGradient(0,LAKE.y,0,LAKE.y+LAKE.h);
+  wg.addColorStop(0,'#2a86c8'); wg.addColorStop(.5,'#1f6fb8'); wg.addColorStop(1,'#175e9c');
+  roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r); cx.fillStyle=wg; cx.fill();
+  cx.save(); roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r); cx.clip();   // caustic shimmer, clipped to water
+  cx.globalAlpha=.07; cx.fillStyle='#cfeaff';
+  for(let i=0;i<11;i++){
+    const yy=LAKE.y+26+i*52, drift=(i%2?1:-1)*tSec*16;
+    const xx=LAKE.x-60+(((i*97+drift)%(LAKE.w+120))+ (LAKE.w+120))%(LAKE.w+120);
+    cx.beginPath(); cx.ellipse(xx,yy,24,5,0,0,7); cx.fill();
+  }
   cx.globalAlpha=1; cx.restore();
-  // decorative trees on the mainland margin (drawn before the island so they sit behind nothing important)
+  // decorative trees on the mainland margin, with a soft cast shadow
   for(const t of TREES){
+    cx.fillStyle='rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(t.x+3,t.y+t.r*.7,t.r*.9,t.r*.4,0,0,7); cx.fill();
     cx.fillStyle='#173c1d'; cx.beginPath(); cx.arc(t.x+2,t.y+3,t.r,0,7); cx.fill();
     cx.fillStyle='#215a29'; cx.beginPath(); cx.arc(t.x,t.y,t.r,0,7); cx.fill();
-    cx.fillStyle='rgba(255,255,255,.07)'; cx.beginPath(); cx.arc(t.x-t.r*.3,t.y-t.r*.3,t.r*.5,0,7); cx.fill();
+    cx.fillStyle='rgba(255,255,255,.08)'; cx.beginPath(); cx.arc(t.x-t.r*.3,t.y-t.r*.3,t.r*.5,0,7); cx.fill();
   }
-  // island: sandy shore, then grass, then collar, then putting surface
-  cx.fillStyle='#d9c188'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island,0,7); cx.fill();     // sand rim
-  cx.fillStyle='#3a8342'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island-7,0,7); cx.fill();   // island rough
-  cx.fillStyle='#54a049'; cx.beginPath(); cx.arc(GC.x,GC.y,R.collar,0,7); cx.fill();     // collar / fringe
-  cx.fillStyle='#74c85f'; cx.beginPath(); cx.arc(GC.x,GC.y,R.green,0,7); cx.fill();      // putting surface
-  cx.save(); cx.globalAlpha=.06; cx.strokeStyle='#fff'; cx.lineWidth=6;
+  // island: drop shadow → sandy shore → rough → collar → lit putting surface
+  cx.fillStyle='rgba(3,18,34,.30)'; cx.beginPath(); cx.ellipse(GC.x+5,GC.y+11,R.island+3,R.island-1,0,0,7); cx.fill();
+  cx.strokeStyle='rgba(255,255,255,.22)'; cx.lineWidth=4; cx.beginPath(); cx.arc(GC.x,GC.y,R.island+2,0,7); cx.stroke(); // shoreline foam
+  const sg=cx.createRadialGradient(GC.x-22,GC.y-24,R.collar,GC.x,GC.y,R.island);
+  sg.addColorStop(0,'#e8d4a0'); sg.addColorStop(1,'#c7ab70');
+  cx.fillStyle=sg; cx.beginPath(); cx.arc(GC.x,GC.y,R.island,0,7); cx.fill();
+  cx.fillStyle='#357c3e'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island-8,0,7); cx.fill();
+  cx.fillStyle='#4f9a45'; cx.beginPath(); cx.arc(GC.x,GC.y,R.collar,0,7); cx.fill();
+  const gg=cx.createRadialGradient(GC.x-26,GC.y-30,8,GC.x,GC.y,R.green);
+  gg.addColorStop(0,'#8fe271'); gg.addColorStop(1,'#5faf4d');
+  cx.fillStyle=gg; cx.beginPath(); cx.arc(GC.x,GC.y,R.green,0,7); cx.fill();
+  cx.save(); cx.beginPath(); cx.arc(GC.x,GC.y,R.green,0,7); cx.clip();       // mow arcs + collar inner-shadow
+  cx.globalAlpha=.07; cx.strokeStyle='#fff'; cx.lineWidth=6;
   for(let r=13;r<R.green;r+=13){ cx.beginPath(); cx.arc(GC.x,GC.y,r,0,7); cx.stroke(); }
-  cx.globalAlpha=1; cx.restore();
-  // bunkers on the green edge
+  cx.globalAlpha=1; cx.strokeStyle='rgba(0,0,0,.13)'; cx.lineWidth=9;
+  cx.beginPath(); cx.arc(GC.x,GC.y,R.green-2,0,7); cx.stroke(); cx.restore();
+  // bunkers on the green edge, with a rim shadow + lit sand
   for(const b of BUNKERS){
-    cx.fillStyle='#ece0b4'; cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.fill();
-    cx.fillStyle='rgba(150,120,60,.35)'; cx.beginPath(); cx.ellipse(b.x,b.y+3,b.rx*.7,b.ry*.55,0,0,7); cx.fill();
+    cx.fillStyle='rgba(110,88,42,.45)'; cx.beginPath(); cx.ellipse(b.x,b.y+2,b.rx+1.5,b.ry+1.5,0,0,7); cx.fill();
+    const bg=cx.createRadialGradient(b.x-5,b.y-5,2,b.x,b.y,b.rx);
+    bg.addColorStop(0,'#f6ecd2'); bg.addColorStop(1,'#dcc998');
+    cx.fillStyle=bg; cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.fill();
+    cx.fillStyle='rgba(150,118,58,.22)'; cx.beginPath(); cx.ellipse(b.x,b.y+3,b.rx*.6,b.ry*.5,0,0,7); cx.fill();
   }
   // scoring rings (bright while aiming)
   const hot = S.phase==='aim'||S.phase==='power';
@@ -938,13 +958,22 @@ function drawCourse(){
   cx.fillStyle='rgba(255,220,60,.35)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.inner,0,7); cx.fill();
   cx.strokeStyle='rgba(255,220,60,.95)'; cx.stroke();
   cx.globalAlpha=1;
-  // hole + flag
-  cx.fillStyle='#0c2410'; cx.beginPath(); cx.arc(GC.x,GC.y,R.hole,0,7); cx.fill();
-  cx.strokeStyle='#fff'; cx.lineWidth=2;
-  cx.beginPath(); cx.moveTo(GC.x,GC.y); cx.lineTo(GC.x,GC.y-34); cx.stroke();
-  const flap=6+S.wind.spd*1.6;
+  // hole — cup with a lit rim
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.hole+1.5,0,7); cx.fill();
+  const hg=cx.createRadialGradient(GC.x,GC.y-2,1,GC.x,GC.y,R.hole);
+  hg.addColorStop(0,'#173a1c'); hg.addColorStop(1,'#06170b');
+  cx.fillStyle=hg; cx.beginPath(); cx.arc(GC.x,GC.y,R.hole,0,7); cx.fill();
+  // flag — pole with a soft shadow and a gently waving pennant
+  cx.strokeStyle='rgba(0,0,0,.25)'; cx.lineWidth=2.5; cx.beginPath(); cx.moveTo(GC.x+1.5,GC.y); cx.lineTo(GC.x+1.5,GC.y-33); cx.stroke();
+  cx.strokeStyle='#eef3f0'; cx.lineWidth=2.2; cx.beginPath(); cx.moveTo(GC.x,GC.y); cx.lineTo(GC.x,GC.y-35); cx.stroke();
+  const wob=Math.sin(performance.now()/240)*2, flap=7+S.wind.spd*1.4;
   cx.fillStyle='#ff4040'; cx.beginPath();
-  cx.moveTo(GC.x,GC.y-34); cx.lineTo(GC.x+flap+8,GC.y-29); cx.lineTo(GC.x,GC.y-24); cx.closePath(); cx.fill();
+  cx.moveTo(GC.x,GC.y-35);
+  cx.quadraticCurveTo(GC.x+flap*.6, GC.y-33+wob, GC.x+flap+9, GC.y-30);
+  cx.quadraticCurveTo(GC.x+flap*.6, GC.y-28+wob, GC.x, GC.y-24);
+  cx.closePath(); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.18)'; cx.beginPath();
+  cx.moveTo(GC.x,GC.y-35); cx.quadraticCurveTo(GC.x+flap*.6,GC.y-33+wob,GC.x+flap+9,GC.y-30); cx.lineTo(GC.x,GC.y-31); cx.closePath(); cx.fill();
   // tee box on the mainland at the bottom
   cx.fillStyle='#3f8f47'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y,52,24,0,0,7); cx.fill();
   cx.fillStyle='rgba(255,255,255,.05)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y-3,40,15,0,0,7); cx.fill();
@@ -1089,14 +1118,17 @@ function drawBall(){
     cx.beginPath(); cx.arc(p.x,p.y,p.r*(0.4+i/S.ballTrail.length*0.6),0,7); cx.fill();
   }
   cx.globalAlpha=1;
-  // shadow
-  cx.fillStyle='rgba(0,0,0,.30)';
-  cx.beginPath(); cx.ellipse(b.x+b.alt*.14+3,b.y+5,8*sc*(1-b.alt/900),4.4*sc,0,0,7); cx.fill();
-  // ball
-  const grad=cx.createRadialGradient(b.x-3*sc,by-3*sc,1,b.x,by,9*sc);
-  grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,'#b9c4bd');
+  // ground shadow — softens and drifts out as the ball climbs
+  const lift=Math.min(1,b.alt/180);
+  cx.fillStyle=`rgba(0,0,0,${0.32-lift*0.18})`;
+  cx.beginPath(); cx.ellipse(b.x+b.alt*.16+3,b.y+5,8.5*sc*(1-lift*0.35),4.6*sc*(1-lift*0.3),0,0,7); cx.fill();
+  // ball with a soft rim + specular highlight
+  const grad=cx.createRadialGradient(b.x-3.2*sc,by-3.2*sc,1,b.x,by,9.5*sc);
+  grad.addColorStop(0,'#ffffff'); grad.addColorStop(.7,'#eef1ef'); grad.addColorStop(1,'#aeb9b2');
   cx.fillStyle=grad;
   cx.beginPath(); cx.arc(b.x,by,8.4*sc,0,7); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.9)';
+  cx.beginPath(); cx.arc(b.x-2.6*sc,by-3*sc,2.2*sc,0,7); cx.fill();
   if(moving || WEATHER[S.weather].name==='Night'){
     cx.strokeStyle=ch.trail; cx.globalAlpha=.6; cx.lineWidth=2;
     cx.beginPath(); cx.arc(b.x,by,10*sc,0,7); cx.stroke(); cx.globalAlpha=1;
@@ -1210,9 +1242,18 @@ function frame(now){
   drawWindHud();
   drawParticles(dt);
   drawCelebration();
+  drawVignette();
   drawWeather(dt);
   drawCinema(dt);
   requestAnimationFrame(frame);
+}
+let _vig=null;
+function drawVignette(){
+  if(!_vig){
+    _vig=cx.createRadialGradient(W/2,H*.44,H*.28,W/2,H*.5,H*.72);
+    _vig.addColorStop(0,'rgba(0,0,0,0)'); _vig.addColorStop(1,'rgba(0,0,0,.30)');
+  }
+  cx.fillStyle=_vig; cx.fillRect(0,0,W,H);
 }
 requestAnimationFrame(frame);
 toClub();
