@@ -149,6 +149,7 @@ const HAZARD_START_LANE: Record<HazardKind, number> = {
 };
 
 interface Firefly { wx: number; y: number; phase: number; }
+interface Mote { x: number; y: number; phase: number; size: number; }
 
 export class Scene {
   private ctx: CanvasRenderingContext2D;
@@ -157,6 +158,7 @@ export class Scene {
   private t = 0;
   private noise: HTMLCanvasElement;
   private fireflies: Firefly[] = [];
+  private motes: Mote[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     canvas.width = VIEW_W;
@@ -234,9 +236,12 @@ export class Scene {
     }
 
     this.drawSky(g, w);
+    this.drawGodRays(g);
     this.drawHills(g, w.scrollX * 0.12);
     this.drawTreeline(g, w.scrollX * 0.3);
     this.drawStreet(g, w);
+    this.drawHaze(g);
+    this.drawMotes(g, w, dt);
     if (w.hazard) this.drawHazard(g, w, w.hazard);
     this.drawRider(g, w);
     if (w.paperArc) this.drawPaper(g, w);
@@ -253,6 +258,14 @@ export class Scene {
     grad.addColorStop(1, `rgba(20,10,40,${base})`);
     g.fillStyle = grad;
     g.fillRect(0, 0, VIEW_W, VIEW_H);
+    // fine film grain — breaks up flat gradients, the difference between "rendered" and "shot"
+    g.globalAlpha = 0.05;
+    const gOff = Math.floor(this.t * 24) % 256;
+    g.drawImage(this.noise, -gOff, 0, 256, 256);
+    g.drawImage(this.noise, 256 - gOff, 0, 256, 256);
+    g.drawImage(this.noise, 512 - gOff, 0, 256, 256);
+    g.drawImage(this.noise, 768 - gOff, 0, 256, 256);
+    g.globalAlpha = 1;
   }
 
   /* ---------------- environment ---------------- */
@@ -311,6 +324,60 @@ export class Scene {
         g.moveTo(x - 7, y - wing); g.quadraticCurveTo(x, y + 2, x + 7, y - wing);
         g.stroke();
       }
+    }
+  }
+
+  /** Soft light shafts off the sun — the single cheapest "cinematic" cue for a golden-hour scene. */
+  private drawGodRays(g: CanvasRenderingContext2D): void {
+    const sx = VP_X + 210, sy = VP_Y - 40;
+    g.save();
+    g.beginPath(); g.rect(0, 0, VIEW_W, VP_Y); g.clip();
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 5; i++) {
+      const a = -0.95 + i * 0.42 + Math.sin(this.t * 0.15 + i) * 0.025;
+      const len = 260 + i * 26;
+      const ex = sx + Math.cos(a) * len, ey = sy + Math.sin(a) * len;
+      const grad = g.createLinearGradient(sx, sy, ex, ey);
+      grad.addColorStop(0, 'rgba(255,236,190,0.14)');
+      grad.addColorStop(1, 'rgba(255,236,190,0)');
+      g.strokeStyle = grad;
+      g.lineWidth = 30 - i * 3;
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
+    }
+    g.restore();
+  }
+
+  /** Atmospheric haze banked against the horizon — the classic depth cue that sells distance. */
+  private drawHaze(g: CanvasRenderingContext2D): void {
+    const bottom = VP_Y + (VIEW_H - VP_Y) * 0.4;
+    const grad = g.createLinearGradient(0, VP_Y, 0, bottom);
+    grad.addColorStop(0, 'rgba(255,193,150,0.24)');
+    grad.addColorStop(1, 'rgba(255,193,150,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, VP_Y, VIEW_W, bottom - VP_Y);
+  }
+
+  /** Slow-drifting motes catching the low sun — ambient life in the air over the street. */
+  private drawMotes(g: CanvasRenderingContext2D, w: World, dt: number): void {
+    if (this.motes.length === 0) {
+      for (let i = 0; i < 16; i++) {
+        this.motes.push({
+          x: Math.random() * VIEW_W,
+          y: VP_Y + Math.random() * (VIEW_H - VP_Y),
+          phase: Math.random() * 10,
+          size: 1.4 + Math.random() * 2.4,
+        });
+      }
+    }
+    for (const m of this.motes) {
+      m.y -= dt * 6;
+      if (m.y < VP_Y) m.y = VIEW_H - 6;
+      const drift = m.x + Math.sin(this.t * 0.6 + m.phase) * 10 - w.scrollX * 0.02;
+      const x = ((drift % VIEW_W) + VIEW_W) % VIEW_W;
+      const alpha = 0.1 + 0.09 * Math.sin(this.t * 1.3 + m.phase);
+      if (alpha <= 0) continue;
+      g.fillStyle = `rgba(255,225,170,${alpha})`;
+      g.beginPath(); g.arc(x, m.y, m.size, 0, Math.PI * 2); g.fill();
     }
   }
 
@@ -531,6 +598,16 @@ export class Scene {
     for (let x = -nOff; x < VIEW_W; x += 256) {
       g.drawImage(this.noise, x, VP_Y, 256, VIEW_H - VP_Y);
     }
+    // worn tire tracks — both converge exactly on the vanishing point, like the road edges do
+    g.fillStyle = 'rgba(20,18,28,0.16)';
+    for (const frac of [-0.42, 0.42]) {
+      g.beginPath();
+      g.moveTo(VP_X, VP_Y);
+      g.lineTo(VP_X + (frac - 0.085) * ROAD_NEAR, VIEW_H);
+      g.lineTo(VP_X + (frac + 0.085) * ROAD_NEAR, VIEW_H);
+      g.closePath();
+      g.fill();
+    }
     g.fillStyle = 'rgba(255,158,94,0.07)';
     g.fillRect(0, VP_Y, VIEW_W, 16);
     g.restore();
@@ -731,6 +808,12 @@ export class Scene {
     // body + siding lines
     g.fillStyle = siding;
     g.fillRect(hL, topY, hw, hh);
+    // soft contact shadow where the wall meets the ground — keeps the house from floating
+    const ao = g.createLinearGradient(0, baseY - 16, 0, baseY);
+    ao.addColorStop(0, 'rgba(40,32,60,0)');
+    ao.addColorStop(1, 'rgba(40,32,60,0.22)');
+    g.fillStyle = ao;
+    g.fillRect(hL, baseY - 16, hw, 16);
     g.strokeStyle = 'rgba(74,60,110,0.12)';
     g.lineWidth = 1;
     for (let sy = topY + 10; sy < baseY; sy += 9) {

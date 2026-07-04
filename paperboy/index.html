@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B0D14" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗞</text></svg>" />
-    <title>Paperboy: The Run — Prototype</title>
+    <title>Paperboy: The Run</title>
   </head>
   <body>
     <div id="app">
@@ -21,10 +22,12 @@
       <main class="stage">
         <canvas id="game"></canvas>
         <div id="overlay" class="overlay hidden">
-          <div id="overlay-kicker" class="kicker"></div>
-          <div id="overlay-title" class="title"></div>
-          <div id="overlay-amount" class="amount"></div>
-          <div id="overlay-sub" class="sub"></div>
+          <div class="card">
+            <div id="overlay-kicker" class="kicker"></div>
+            <div id="overlay-title" class="title"></div>
+            <div id="overlay-amount" class="amount"></div>
+            <div id="overlay-sub" class="sub"></div>
+          </div>
         </div>
         <div id="routes" class="routes">
           <button class="route" data-route="easy-street">
