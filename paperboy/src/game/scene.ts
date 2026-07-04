@@ -48,6 +48,11 @@ export const HOUSE_SPACING = 460;
 /** World units still ahead of scrollX at the moment of throw (a depth, not a screen pixel). */
 export const DELIVER_X = 260;
 
+/** Occasional cross-street: every 5 houses, offset to fall between two of them. */
+const CROSS_STREET_SPACING = HOUSE_SPACING * 5;
+const CROSS_STREET_PHASE = HOUSE_SPACING * 0.5;
+const CROSS_STREET_DEPTH_WIDTH = 70;
+
 function depthScale(distAhead: number): number {
   const z = Math.max(distAhead + NEAR_Z, 12);
   return FOCAL / (FOCAL + z);
@@ -364,6 +369,9 @@ export class Scene {
     g.fillStyle = 'rgba(255,217,138,0.14)';
     g.fillRect(0, VP_Y, VIEW_W, 8);
 
+    const crossings = this.crossStreetDepths(w);
+    for (const d of crossings) this.crossStreetBand(g, d);
+
     // sidewalk + curb + road trapezoids, apex at the vanishing point (the signature receding street)
     this.trapezoid(g, SIDEWALK_NEAR, '#B8AFA4');
     g.fillStyle = 'rgba(255,233,196,0.15)';
@@ -373,6 +381,7 @@ export class Scene {
     this.trapezoid(g, CURB_NEAR, '#8E8578');
     this.trapezoid(g, ROAD_NEAR, '#5A5566');
     this.roadTexture(g, w);
+    for (const d of crossings) this.crossStreetMarkings(g, d);
 
     // poles+lamps+wires, parked cars, and houses — far-to-near so nearer objects overlap farther ones
     const first = Math.floor(w.scrollX / HOUSE_SPACING) - 1;
@@ -388,6 +397,95 @@ export class Scene {
     this.updateFireflies(g, w);
     for (const i of depths) this.drawParkedCar(g, i * HOUSE_SPACING - w.scrollX + HOUSE_SPACING * 0.32, i);
     for (const i of depths) this.drawLot(g, i * HOUSE_SPACING - w.scrollX, i, i === w.targetHouse);
+  }
+
+  /** Near-edge depths of every cross-street intersection currently within view. */
+  private crossStreetDepths(w: World): number[] {
+    const first = Math.floor((w.scrollX - CROSS_STREET_PHASE) / CROSS_STREET_SPACING) - 1;
+    const last = Math.floor((w.scrollX + 2400 - CROSS_STREET_PHASE) / CROSS_STREET_SPACING) + 1;
+    const out: number[] = [];
+    for (let i = first; i <= last; i++) {
+      out.push(i * CROSS_STREET_SPACING + CROSS_STREET_PHASE - w.scrollX);
+    }
+    return out;
+  }
+
+  /**
+   * A straight road perpendicular to ours, at a fixed distance ahead, extends
+   * to infinity left and right — so in screen space it is just a full-width
+   * horizontal band between the near and far edges' projected y. Drawn under
+   * our own road/sidewalk so our lane continues through the intersection
+   * seamlessly (see crossStreetMarkings for the part that must sit on top).
+   */
+  private crossStreetBand(g: CanvasRenderingContext2D, depthNear: number): void {
+    const depthFar = depthNear + CROSS_STREET_DEPTH_WIDTH;
+    if (depthFar < -80) return;
+    const scaleNear = depthScale(depthNear);
+    const scaleFar = depthScale(depthFar);
+    const yNear = projY(scaleNear);
+    const yFar = projY(scaleFar);
+    if (yNear < VP_Y - 4 || yFar > VIEW_H + 20) return;
+
+    const top = Math.max(VP_Y, yFar);
+    const bottom = Math.min(VIEW_H, yNear);
+    if (bottom <= top) return;
+    g.fillStyle = '#565061';
+    g.fillRect(0, top, VIEW_W, bottom - top);
+    g.fillStyle = 'rgba(142,133,120,0.7)';
+    g.fillRect(0, yFar, VIEW_W, Math.max(1, 2 * scaleFar));
+    g.fillRect(0, Math.max(top, yNear - Math.max(1, 2 * scaleNear)), VIEW_W, Math.max(1, 2 * scaleNear));
+  }
+
+  /** Crosswalk stripes + a stop sign — drawn after our own road so they paint on top of it. */
+  private crossStreetMarkings(g: CanvasRenderingContext2D, depthNear: number): void {
+    const depthFar = depthNear + CROSS_STREET_DEPTH_WIDTH;
+    const scaleNear = depthScale(depthNear);
+    const scaleFar = depthScale(depthFar);
+    const yNear = projY(scaleNear);
+    const yFar = projY(scaleFar);
+    if (yNear < VP_Y - 4 || yFar > VIEW_H + 20 || scaleNear < 0.04) return;
+
+    const roadHalf = ROAD_NEAR * scaleNear;
+    const stripeCount = 5;
+    const cell = (roadHalf * 2) / (stripeCount * 2 - 1);
+    g.fillStyle = 'rgba(244,241,232,0.85)';
+    for (let s = 0; s < stripeCount; s++) {
+      const sx = VP_X - roadHalf + s * 2 * cell;
+      g.fillRect(sx, Math.max(VP_Y, yFar), cell, Math.max(1, yNear - Math.max(VP_Y, yFar)));
+    }
+
+    this.stopSign(g, scaleNear, yNear);
+  }
+
+  private stopSign(g: CanvasRenderingContext2D, scale: number, yNear: number): void {
+    if (scale < 0.12) return;
+    const x = projX(scale, 1, SIDEWALK_NEAR) + 16 * scale;
+    const postH = 72 * scale;
+    g.strokeStyle = '#8B90A3';
+    g.lineWidth = Math.max(1, 4 * scale);
+    g.beginPath(); g.moveTo(x, yNear); g.lineTo(x, yNear - postH); g.stroke();
+
+    g.save();
+    g.translate(x, yNear - postH - 2 * scale);
+    g.scale(scale, scale);
+    g.fillStyle = VIOLET(0.3);
+    g.beginPath(); g.ellipse(1, 2, 10, 3, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#C0392B';
+    g.beginPath();
+    const r = 12;
+    for (let k = 0; k < 8; k++) {
+      const a = Math.PI / 8 + (k * Math.PI) / 4;
+      const px = Math.cos(a) * r, py = Math.sin(a) * r;
+      if (k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#F4F1E8';
+    g.lineWidth = 1.4;
+    g.stroke();
+    g.fillStyle = '#F4F1E8';
+    g.fillRect(-8, -2, 16, 4);
+    g.restore();
   }
 
   /** Perspective-consistent expansion joints, so the sidewalk band doesn't read as a flat slab. */
