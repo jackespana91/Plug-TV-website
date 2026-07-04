@@ -97,7 +97,69 @@ ace_crashed.png    1 frame (or 3, looped)
 
 **Optional but helpful:** a small manifest (JSON or just plain text) confirming frame count and intended fps per file, in case anything above needs adjusting once you see the real art in motion — I'll match the timings above regardless, but it's a good sanity check both ways.
 
+**Anchor consistency:** whatever the frame canvas size ends up being, Ace's ground-contact point (rear tire touching the road) must sit at the **same relative position within every frame, in every pose file** — e.g. always centered horizontally, always N px up from the bottom edge. If that point drifts between poses or between frames within a pose, he'll visibly jump/slide on screen every time the animation switches, since the game always draws from one fixed anchor regardless of which pose is active.
+
 Once these 8 files exist, hand them over and I'll wire them into `scene.ts` (replacing `drawRider`/`drawCrashed`) and `director.ts` (pose triggers are unchanged — same state names, same timings).
+
+## 7. Frame-by-frame shot list (for the animated poses)
+
+A concept sheet delivered one "hero" key frame per pose — a strong start, and each is called out below as the anchor to build the rest of that pose's sequence around. This is the in-between breakdown needed to hit the confirmed frame counts.
+
+**RIDE — 8 frames, one full pedal-crank rotation, looped (crank advances 45° per frame):**
+1. Right pedal at 12 o'clock, left at 6 o'clock — passing position
+2. Right pedal ~1:30, power stroke beginning, slight forward torso dip
+3. Right pedal ~3 o'clock, full power stroke, torso dip at its deepest
+4. Right pedal ~4:30, left leg beginning to rise
+5. Right pedal at 6 o'clock, left at 12 — mirror of frame 1
+6. Right pedal ~7:30
+7. Right pedal ~9 o'clock, right leg rising, torso rebounding upward
+8. Right pedal ~10:30, approaching frame 1 again (loop seam — frame 8 → frame 1 must read as continuous)
+
+Jacket hem and bag strap should have a small amount of independent sway rather than moving in lockstep with the body, so the loop doesn't look mechanical.
+
+**THROW — 6 frames, 450ms, reach → wind-up → release → follow-through → settle:**
+1. Anticipation: right arm begins reaching back toward the hip bag, torso twists slightly
+2. Grab: hand at the bag opening, fingers closing on a rolled paper
+3. Wind-up: arm drawn back and up, torso coiled, paper gripped
+4. **Release** *(the sheet's key frame — arm swung out to the right, paper leaving the hand)*
+5. Follow-through: arm continues past the release point, torso slightly overrotated
+6. Return: arm relaxing back down toward the handlebar grip, settling into `ride`
+
+**WHEELIE — 7 frames, 700ms:**
+1. Compression: weight shifts back, slight crouch, anticipation before the lift
+2. Lift-off: front wheel just leaving the ground
+3. Rising: front wheel ~30° up
+4. **Peak** *(the sheet's key frame — front wheel at its highest, body leaned back)*
+5. Hold: sustained peak, can be a near-duplicate of frame 4 with a small settle
+6. Descending: front wheel coming back down
+7. Landing: wheel touches down, slight compression/bounce, transitioning back to `ride`
+
+**TUCK — 5 frames, ~930ms played back at 0.3× (so it reads slow on screen even though the source sequence is quick):**
+1. Alert: shoulders rise, head begins turning
+2. Brace: deeper crouch, head turned further, one eye becoming visible
+3. **Peak tension** *(the sheet's key frame — full crouch, eye wide, the "yikes" beat)*
+4. Relief: head turning back forward, shoulders starting to relax
+5. Recover: back to normal riding posture, transitioning to `ride`
+
+**SKID — 6 frames, ~900ms into the cash-out celebration:**
+1. Brake initiated: weight shifts forward, slight forward lean
+2. Skid begins: rear wheel sliding, first dust
+3. **Skid peak** *(the sheet's key frame — maximum lean/slide angle, biggest dust cloud)*
+4. Settling: bike straightening up, dust thinning
+5. Stopped: fully settled, upright
+6. Celebration flourish: a small arm-up/fist-pump beat — keep this one modest, since bigger wins get their own separate confetti/fanfare treatment already handled elsewhere in the game; this frame just needs to read as "pleased," not carry the whole celebration
+
+**TUMBLE — 8 frames, ~780ms wipeout:**
+1. Impact: front wheel catches something, bike jerks under him
+2. Launch: rider separating from the bike, both starting to go airborne
+3. **Peak chaos** *(the sheet's key frame — rider and bike scattered mid-air, papers flying)*
+4. Falling: descending, still tumbling
+5. First impact: hits the ground, beginning to bounce/roll
+6. Roll: tumbling across the ground
+7. Sliding to a stop: momentum bleeding off, debris settling
+8. At rest: everything stopped, directly into the `crashed` pose's starting position
+
+**CRASHED/DAZED:** the delivered key frame already works as a static hold. If you want the optional 3-frame loop, the only thing that needs to move is the ring of stars/halo above his head, rotating through 3 positions (e.g. 0°/120°/240°) — body, face, and everything else stays locked in the same pose across all 3 frames.
 
 ---
 
