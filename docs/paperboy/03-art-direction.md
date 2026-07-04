@@ -1,7 +1,9 @@
 # PAPERBOY: THE RUN
-## Visual Direction & Production Polish — v1.0
+## Visual Direction & Production Polish — v1.1
 
 > **Phase 4 deliverable.** Art direction for the game defined in `01-game-design-document.md`. One sentence brief: **DreamWorks/Pixar-quality stylized 3D warmth in the world, premium contemporary casino UI in the chrome.** The street is nostalgia; the interface is money. They never blend.
+>
+> **v1.1 — retro-arcade camera pivot.** The world layer now quotes the single most recognizable signature of the original 1985 Paperboy arcade cabinet: a tilted, receding road with a fixed vanishing point, houses fanning out to both sides as they approach, and Ace held on a fixed screen anchor while the street rushes toward camera. This is a "retro-flavored, not retro-literal" homage — richer color, lighting, and smooth eased animation are kept; low-res pixel art and a literal CRT/scoreboard HUD are not adopted. The chrome (HUD, buttons) is unchanged by this pivot; the two-layer rule below still holds. See §4.5 for the projection model.
 
 ---
 
@@ -71,6 +73,17 @@ Numbers rule: money always shows two decimals; multipliers show `×` prefix and 
 - **Hazards** are characters, not props: the dog has an expression arc (sleepy → alert → airborne → hedge-tumble shame); the car has eyes-in-headlights energy without literal eyes. Every villain gets a *defeat* pose — comedy on survival is what makes near-misses joyful instead of stressful.
 - **Environmental storytelling:** every lot tells a one-glance story — a half-mowed lawn with an abandoned mower, a "LOST CAT" poster (the cat watches from the roof), a garage band, sprinkler rainbows, a kid's chalk hopscotch the tires respect. Ten seconds of any run should contain one discoverable. These live on a rotation deck so streets never repeat exactly (GDD §7's tile system).
 - **Depth recipe:** 3 parallax bands (kerb detail / houses / skyline), atmospheric desaturation with distance, and DOF only during near-miss slow-mo and celebrations — never during the decision window (the street ahead must read clearly when the player is choosing).
+
+### 4.5 The Vanishing-Point Road (retro-arcade camera)
+
+Ace is fixed on screen; the street rushes toward camera through a single vanishing point on the horizon. Houses, hazards, and the road/sidewalk itself are all driven by one shared projection so nothing needs hand-placed perspective:
+
+- **Projection:** a depth value *d* (world units still ahead) maps to on-screen scale via `scale = FOCAL / (FOCAL + max(d + NEAR_Z, ε))` — a simple hyperbolic falloff, not a literal camera, tuned so distant objects cluster near the horizon and close ones grow quickly, the classic pseudo-3D road-game feel (reference implementation: `paperboy/src/game/scene.ts`, `depthScale`/`projX`/`projY`).
+- **Screen position:** `y` is linear in scale from the horizon down to the bottom edge; `x` fans out from the vanishing point by `lane × nearWidth × scale`, so left/right lanes are parallel at the horizon and spread to full width up close — this single rule draws the road, sidewalk, and house rows as nested trapezoids sharing one apex.
+- **Sprites scale for free:** every house/hazard/paper is still drawn as a small set of local, relative-coordinate shapes (unchanged from the flat-view build) — the projector just wraps them in `translate(x,y); scale(s,s)`, so distant objects are the same artwork, smaller and thinner-lined, exactly as real perspective would render them.
+- **Delivery lane:** the target house always sits in the right lane (fanning right of centre); a mirrored decorative house occupies the left lane purely for street density and symmetry.
+- **Hazard blocking:** each hazard kind has a starting lane (the dog charges in from the yard at far-left, a car holds the oncoming lane, etc.) that blends toward Ace's lane through the threat phase and, on an escape, continues past to the opposite side — so a near-miss reads as a diagonal close call across the receding road, not a flat left-right slide.
+- **What this is not:** no low-res pixel grid, no fixed 8-directional sprite rotation, no CRT scanline overlay. The homage is the camera and composition, not the resolution.
 
 ---
 

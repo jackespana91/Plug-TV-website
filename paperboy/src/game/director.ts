@@ -19,6 +19,7 @@ import {
 import * as sfx from './audio';
 import { chance, pick, range } from './presentation';
 import {
+  DELIVER_POINT,
   DELIVER_X,
   GROUND_Y,
   HOUSE_SPACING,
@@ -82,8 +83,13 @@ export class Director {
       w.paperArc.t += dt / 0.45;
       if (w.paperArc.t >= 1) w.paperArc = null;
     }
+    if (w.shake > 0) w.shake = Math.max(0, w.shake - dt * 26); // fast decay — a punch, not a rumble
     // ambient chain tick keyed to speed (GDD §14: the bike is the metronome)
     if (w.speed > 0 && Math.random() < dt * (w.speed / 90)) sfx.chainTick();
+  }
+
+  private punch(amount: number): void {
+    this.world.shake = Math.max(this.world.shake, amount);
   }
 
   async perform(script: OutcomeScript, cfg: RouteConfig, targetStep: number): Promise<void> {
@@ -116,14 +122,16 @@ export class Director {
         w.poseT = 0;
         w.paperArc = {
           t: 0,
-          targetX: DELIVER_X + range(-14, 14),
-          targetY: GROUND_Y - 150,
+          targetX: DELIVER_POINT.x + range(-14, 14),
+          targetY: DELIVER_POINT.y,
           golden,
         };
         await this.clock.wait(450);
         sfx.thwack();
         sfx.deliveryNote(k);
-        this.scene.burst(DELIVER_X, GROUND_Y - 150, ['#D9C79E', '#F4F1E8'], 6, 120);
+        this.scene.burst(DELIVER_POINT.x, DELIVER_POINT.y, ['#D9C79E', '#F4F1E8'], 6, 120);
+        this.scene.ring(DELIVER_POINT.x, DELIVER_POINT.y, 'rgba(244,241,232,0.6)');
+        this.punch(2);
         const mult = effectiveMultiplier(script, cfg, k);
         w.multiplier = mult;
         w.pose = 'ride';
@@ -131,7 +139,9 @@ export class Director {
         if (golden) {
           sfx.goldenShimmer();
           this.popup(`GOLDEN PAPER ×${step.boost}!`, 34, '#FFC53D');
-          this.scene.burst(DELIVER_X, GROUND_Y - 150, ['#FFC53D', '#FF8A3D'], 26, 260);
+          this.scene.burst(DELIVER_POINT.x, DELIVER_POINT.y, ['#FFC53D', '#FF8A3D'], 26, 260);
+          this.scene.stars(DELIVER_POINT.x, DELIVER_POINT.y - 20, 6);
+          this.punch(4);
           this.ui.onGolden(step.boost!);
           await this.clock.wait(500);
         }
@@ -149,6 +159,7 @@ export class Director {
         if ([5, 10, 25, 50].some((m) => mult >= m && effectiveMultiplier(script, cfg, k - 1) < m)) {
           w.pose = 'wheelie';
           w.poseT = 0;
+          this.punch(3);
           setTimeoutPose(w, 'ride', 700, this.clock);
         }
         this.ui.onDelivered(k, mult, preview(k));
@@ -178,6 +189,7 @@ export class Director {
       w.speed = 0;
       sfx.wipeout();
       this.scene.burst(RIDER_X, GROUND_Y - 20, ['#8B90A3', '#D9C79E', '#F4F1E8'], 22, 180);
+      this.punch(9);
       await this.clock.wait(1200);
       this.ui.onResult(s, { perfectRun: false });
     } finally {
@@ -253,6 +265,7 @@ export class Director {
       w.zoom = 1;
       w.pose = 'ride';
       sfx.bassHit();
+      this.punch(7);
       this.popup(pick(['SO CLOSE!', 'ESCAPED!', 'NOT TODAY!']), 30, '#3DDC6B');
       this.scene.burst(RIDER_X - 60, GROUND_Y - 30, ['#7CB56B', '#5C8A4E'], 14, 200);
     } else {
@@ -275,11 +288,14 @@ export class Director {
     const big = s.multiplier >= 10;
     sfx.cashOutFanfare(big);
     this.scene.burst(RIDER_X, GROUND_Y - 40, ['#FFC53D', '#3DDC6B', '#F4F1E8'], big ? 40 : 18, 260);
+    this.scene.ring(RIDER_X, GROUND_Y - 20, 'rgba(61,220,107,0.7)');
+    this.punch(big ? 6 : 3);
     if (big) this.scene.confettiRain(s.multiplier >= 50 ? 140 : 70);
     const perfectRun = s.survived >= cfg.perfectRunThreshold;
     if (perfectRun) {
       this.popup('PERFECT RUN!', 36, '#FFC53D');
       this.scene.confettiRain(60);
+      this.scene.stars(RIDER_X, GROUND_Y - 60, 8);
     }
     await this.clock.wait(900);
     this.ui.onResult(s, { perfectRun });
