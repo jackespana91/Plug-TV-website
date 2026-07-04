@@ -8,6 +8,7 @@ import { buildShotTimeline, sampleTimeline, timelineDuration } from '../src/game
 import { CLUBS, TEE, GREEN, RADII, tierFor, type Tier, type ClubKey } from '../src/game/config.ts';
 import { mulberry32 } from '../src/game/rng.ts';
 import { dist } from '../src/game/geometry.ts';
+import { CHARACTERS, DEFAULT_CHARACTER, characterById } from '../src/game/characters.ts';
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => { if (!cond) { console.error('  ✗ ' + msg); failures++; } };
@@ -95,6 +96,13 @@ ok(timelineDuration(mega) > timelineDuration(std), 'mega hole-in-one runs longer
 
 // the tier mapping matches the math package
 ok(tierFor(0) === 'lose' && tierFor(1) === 'green' && tierFor(10) === 'lipOut' && tierFor(100) === 'holeIn', 'tierFor mapping intact');
+
+// character roster is well-formed (cosmetic identity layer)
+const ids = new Set(CHARACTERS.map((c) => c.id));
+ok(ids.size === CHARACTERS.length, 'character ids are unique');
+ok(CHARACTERS.every((c) => /^#[0-9a-f]{6}$/i.test(c.color) && /^#[0-9a-f]{6}$/i.test(c.trail)), 'character colours are valid hex');
+ok(CHARACTERS.every((c) => c.name && c.face && c.cel && c.tag), 'every character has name/face/call-out/tag');
+ok(characterById(DEFAULT_CHARACTER).id === DEFAULT_CHARACTER && characterById('nope').id === CHARACTERS[0].id, 'characterById resolves default + fallback');
 
 console.log(failures === 0 ? '\nALL SHOT-ENGINE TESTS PASS ✓' : `\n${failures} ASSERTION(S) FAILED ✗`);
 process.exit(failures === 0 ? 0 : 1);

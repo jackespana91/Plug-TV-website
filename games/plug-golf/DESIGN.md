@@ -158,8 +158,14 @@ TV-coverage presentation on top of the story timeline:
 - **Courses** — Vegas night, Dubai, Scotland links, Japan cherry blossom, Hawaii,
   desert, luxury island, mountain. Pure re-skins of the course renderer; weather
   system already proves the pattern.
-- **Characters** — this is what makes it *The Plug Golf*: streetwear golfers,
-  rappers, footballers, influencers. Unique swing intros + celebrations. Cosmetic.
+- **Characters** *(implemented)* — the identity layer that makes it *The Plug
+  Golf*: a roster of streetwear golfers (Drip / Ice / Mic / Baller / Boss / Ace),
+  each with an accent colour, a coloured ball-trail ("the drip"), and their own
+  win call-out on the result card. Selectable from a HUD avatar chip, persisted
+  in localStorage, plus a branded intro splash. All cosmetic, zero RTP effect.
+  Roster data is shared, typechecked, and tested (`src/game/characters.ts`).
+  Still open: unique per-character swing intros and celebration animations, and
+  unlockable skins.
 - **Sunday Masters as true feature-buy** — currently a 6th mode at equal stake;
   production version becomes a paid-entry event (e.g. 50x stake buys N shots on an
   exclusive course with the 100x table), mirroring slot bonus-buy economics.
