@@ -32,6 +32,9 @@ type CourseRefs = {
  * → rough → collar → lit putting surface → dimensional bunkers.
  * Solid-fill approximation of the canvas prototype's lighting (a full Pixi build
  * can swap in FillGradient for the water/green radial gradients + shimmer).
+ * Decorative sprites the prototype also draws — margin trees, floating lily pads,
+ * shoreline rocks, and the procedural golfer figure — belong in their own Pixi
+ * layers/sprites in the full build and are omitted from this base course pass.
  */
 export function drawCourse(g: GraphicsLike, r: CourseRefs): void {
   const { GREEN: GC, TEE, RADII: R, BUNKERS, LAKE, FIELD } = r;

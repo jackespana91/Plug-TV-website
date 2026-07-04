@@ -272,6 +272,13 @@ const TREES = [                                    // decorative, on the mainlan
   {x:26,y:78,r:15},{x:58,y:120,r:12},{x:394,y:84,r:14},{x:400,y:150,r:11},
   {x:22,y:250,r:11},{x:406,y:300,r:12},{x:30,y:560,r:13},{x:398,y:540,r:12}
 ];
+const LILIES = [                                   // lily pads floating on the lake
+  {x:74,y:150,r:11},{x:338,y:118,r:9},{x:360,y:330,r:12},{x:62,y:432,r:10},
+  {x:330,y:470,r:9},{x:96,y:300,r:8},{x:352,y:225,r:10}
+];
+const ROCKS = [                                    // rocks on the island shoreline (angle around the green)
+  {a:-0.5,r:112},{a:1.9,r:114},{a:3.5,r:112},{a:4.9,r:113}
+];
 const WEATHER = [
   {name:'Sunny',  tint:null,                    rain:false},
   {name:'Sunset', tint:'rgba(255,120,40,.13)',  rain:false},
@@ -919,12 +926,20 @@ function drawCourse(){
     cx.beginPath(); cx.ellipse(xx,yy,24,5,0,0,7); cx.fill();
   }
   cx.globalAlpha=1; cx.restore();
-  // decorative trees on the mainland margin, with a soft cast shadow
+  // lily pads floating on the lake
+  for(const p of LILIES){
+    cx.fillStyle='rgba(0,0,0,.14)'; cx.beginPath(); cx.ellipse(p.x+1,p.y+2,p.r,p.r*.72,0,0,7); cx.fill();
+    cx.fillStyle='#2f7a41'; cx.beginPath(); cx.ellipse(p.x,p.y,p.r,p.r*.72,0.3,0.5,7); cx.fill();
+    cx.fillStyle='#3f9350'; cx.beginPath(); cx.ellipse(p.x-p.r*.15,p.y-p.r*.15,p.r*.7,p.r*.5,0.3,0,7); cx.fill();
+  }
+  // decorative trees on the mainland margin — trunk + layered canopy + shadow
   for(const t of TREES){
-    cx.fillStyle='rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(t.x+3,t.y+t.r*.7,t.r*.9,t.r*.4,0,0,7); cx.fill();
-    cx.fillStyle='#173c1d'; cx.beginPath(); cx.arc(t.x+2,t.y+3,t.r,0,7); cx.fill();
-    cx.fillStyle='#215a29'; cx.beginPath(); cx.arc(t.x,t.y,t.r,0,7); cx.fill();
-    cx.fillStyle='rgba(255,255,255,.08)'; cx.beginPath(); cx.arc(t.x-t.r*.3,t.y-t.r*.3,t.r*.5,0,7); cx.fill();
+    cx.fillStyle='rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(t.x+3,t.y+t.r*.9,t.r*.9,t.r*.38,0,0,7); cx.fill();
+    cx.fillStyle='#5a3d22'; cx.fillRect(t.x-2, t.y, 4, t.r*.9);
+    cx.fillStyle='#173c1d'; cx.beginPath(); cx.arc(t.x+2,t.y+2,t.r,0,7); cx.fill();
+    cx.fillStyle='#256a30'; cx.beginPath(); cx.arc(t.x,t.y,t.r*.92,0,7); cx.fill();
+    cx.fillStyle='#2f7f3a'; cx.beginPath(); cx.arc(t.x-t.r*.28,t.y-t.r*.3,t.r*.55,0,7); cx.fill();
+    cx.fillStyle='rgba(255,255,255,.09)'; cx.beginPath(); cx.arc(t.x-t.r*.35,t.y-t.r*.38,t.r*.34,0,7); cx.fill();
   }
   // island: drop shadow → sandy shore → rough → collar → lit putting surface
   cx.fillStyle='rgba(3,18,34,.30)'; cx.beginPath(); cx.ellipse(GC.x+5,GC.y+11,R.island+3,R.island-1,0,0,7); cx.fill();
@@ -932,6 +947,13 @@ function drawCourse(){
   const sg=cx.createRadialGradient(GC.x-22,GC.y-24,R.collar,GC.x,GC.y,R.island);
   sg.addColorStop(0,'#e8d4a0'); sg.addColorStop(1,'#c7ab70');
   cx.fillStyle=sg; cx.beginPath(); cx.arc(GC.x,GC.y,R.island,0,7); cx.fill();
+  // rocks on the shoreline
+  for(const rk of ROCKS){
+    const p=polar(GC,rk.r,rk.a);
+    cx.fillStyle='#7c8288'; cx.beginPath(); cx.ellipse(p.x,p.y,7,5,rk.a,0,7); cx.fill();
+    cx.fillStyle='#969ca1'; cx.beginPath(); cx.ellipse(p.x-1.5,p.y-1.5,4,3,rk.a,0,7); cx.fill();
+    cx.fillStyle='#63696e'; cx.beginPath(); cx.ellipse(p.x+4,p.y+2,4,3,rk.a,0,7); cx.fill();
+  }
   cx.fillStyle='#357c3e'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island-8,0,7); cx.fill();
   cx.fillStyle='#4f9a45'; cx.beginPath(); cx.arc(GC.x,GC.y,R.collar,0,7); cx.fill();
   const gg=cx.createRadialGradient(GC.x-26,GC.y-30,8,GC.x,GC.y,R.green);
@@ -1017,38 +1039,59 @@ function drawPowerUI(){
   cx.fillStyle='rgba(255,255,255,.9)';
   cx.beginPath(); cx.arc(bx,by,9,0,7); cx.fill();
 }
-/* ---------- golfer figure (procedural, emoji-headed) ---------- */
+/* ---------- golfer figure (procedural mascot, emoji-headed) ---------- */
+function shade(hex,amt){
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,(n>>16)+amt)), g=Math.max(0,Math.min(255,((n>>8)&255)+amt)), b=Math.max(0,Math.min(255,(n&255)+amt));
+  return `rgb(${r},${g},${b})`;
+}
+const SKIN='#e6b98f', SKIN_D='#c99a71';
 function drawFigure(x,y,s,o){
   // o: {color, face, armL, armR, legL, legR, lean, club, clubAng, prop, propDy}
+  const col=o.color, dark=shade(col,-34), light=shade(col,46);
   cx.save(); cx.translate(x,y); cx.rotate(o.lean||0);
-  cx.lineCap='round';
-  // legs
-  cx.strokeStyle='#2a2f33'; cx.lineWidth=5*s;
-  cx.beginPath(); cx.moveTo(0,0); cx.lineTo(Math.cos(o.legL)*16*s, 18*s+Math.sin(o.legL)*4*s); cx.stroke();
-  cx.beginPath(); cx.moveTo(0,0); cx.lineTo(Math.cos(o.legR)*16*s, 18*s+Math.sin(o.legR)*4*s); cx.stroke();
-  // body
-  cx.fillStyle=o.color;
-  cx.beginPath(); cx.roundRect(-8*s,-24*s,16*s,26*s,6*s); cx.fill();
-  cx.fillStyle='rgba(255,255,255,.18)'; cx.beginPath(); cx.roundRect(-8*s,-24*s,6*s,26*s,4*s); cx.fill();
-  // arms
-  cx.strokeStyle=o.color; cx.lineWidth=5*s;
-  const sh=-16*s;
-  const hL={x:Math.cos(o.armL)*15*s, y:sh+Math.sin(o.armL)*15*s};
-  const hR={x:Math.cos(o.armR)*15*s, y:sh+Math.sin(o.armR)*15*s};
-  cx.beginPath(); cx.moveTo(-6*s,sh); cx.lineTo(hL.x,hL.y); cx.stroke();
-  cx.beginPath(); cx.moveTo(6*s,sh);  cx.lineTo(hR.x,hR.y); cx.stroke();
-  // club (held between hands)
+  cx.lineCap='round'; cx.lineJoin='round';
+  const shY=-25*s;                                    // shoulder line
+  const hL={x:Math.cos(o.armL)*16*s-7*s, y:shY+Math.sin(o.armL)*16*s};
+  const hR={x:Math.cos(o.armR)*16*s+7*s, y:shY+Math.sin(o.armR)*16*s};
+  // --- legs (skin + trainers) ---
+  cx.strokeStyle=SKIN; cx.lineWidth=6.5*s;
+  const foot=(ang)=>({x:Math.cos(ang)*17*s, y:15*s+Math.sin(ang)*6*s});
+  for(const ang of [o.legL,o.legR]){ const e=foot(ang);
+    cx.beginPath(); cx.moveTo(0,-3*s); cx.lineTo(e.x,e.y); cx.stroke();
+    cx.fillStyle='#f2f4f5'; cx.beginPath(); cx.ellipse(e.x+Math.cos(ang)*3*s, e.y+3*s, 6*s,3.4*s, 0,0,7); cx.fill();
+    cx.fillStyle=col; cx.beginPath(); cx.ellipse(e.x+Math.cos(ang)*3*s, e.y+2*s, 6*s,1.6*s, 0,0,7); cx.fill();
+  }
+  // --- shorts ---
+  cx.fillStyle=dark; cx.beginPath(); cx.roundRect(-10*s,-8*s,20*s,12*s,5*s); cx.fill();
+  // --- back arm (drawn behind torso) ---
+  cx.strokeStyle=dark; cx.lineWidth=6*s;
+  cx.beginPath(); cx.moveTo(-7*s,shY); cx.lineTo(hL.x,hL.y); cx.stroke();
+  cx.fillStyle=SKIN; cx.beginPath(); cx.arc(hL.x,hL.y,3.4*s,0,7); cx.fill();
+  // --- torso (jersey) ---
+  cx.fillStyle=col; cx.beginPath(); cx.roundRect(-11*s,-31*s,22*s,26*s,8*s); cx.fill();
+  cx.save(); cx.beginPath(); cx.roundRect(-11*s,-31*s,22*s,26*s,8*s); cx.clip();
+  cx.fillStyle=dark; cx.fillRect(3*s,-31*s,9*s,26*s);                         // side shade
+  cx.fillStyle=light; cx.beginPath(); cx.roundRect(-2.5*s,-31*s,5*s,26*s,1*s); cx.fill(); // centre stripe
+  cx.restore();
+  cx.fillStyle=light; cx.beginPath(); cx.roundRect(-6*s,-31*s,12*s,4*s,2*s); cx.fill();   // collar
+  // --- front arm ---
+  cx.strokeStyle=col; cx.lineWidth=6*s;
+  cx.beginPath(); cx.moveTo(7*s,shY); cx.lineTo(hR.x,hR.y); cx.stroke();
+  cx.fillStyle=SKIN; cx.beginPath(); cx.arc(hR.x,hR.y,3.6*s,0,7); cx.fill();
+  // --- club held between the hands ---
   if(o.club){
     cx.save(); cx.translate((hL.x+hR.x)/2,(hL.y+hR.y)/2); cx.rotate(o.clubAng);
-    cx.strokeStyle='#dfe6ea'; cx.lineWidth=3*s;
-    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(0,44*s); cx.stroke();
-    cx.fillStyle='#b9c4bd'; cx.beginPath(); cx.ellipse(3*s,44*s,6*s,3*s,0,0,7); cx.fill();
+    cx.strokeStyle='#c9d2d7'; cx.lineWidth=3*s;
+    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(0,46*s); cx.stroke();
+    cx.fillStyle='#9aa6ad'; cx.beginPath(); cx.ellipse(4*s,46*s,7*s,3.4*s,0,0,7); cx.fill();
     cx.restore();
   }
-  // head (emoji)
-  cx.font=`${22*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText(o.face, 0, -34*s);
-  // prop emoji (mic / ball / crown) near a hand
+  // --- head: neck + emoji face on a skin disc ---
+  cx.fillStyle=SKIN_D; cx.fillRect(-3*s,-33*s,6*s,5*s);
+  cx.font=`${25*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(o.face, 0, -40*s);
+  // --- prop emoji near the raised hand ---
   if(o.prop){ cx.font=`${18*s}px serif`; cx.fillText(o.prop, hR.x, hR.y+(o.propDy||0)); }
   cx.restore();
 }
