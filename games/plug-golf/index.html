@@ -288,12 +288,12 @@ const FLIGHT = {
    has an accent colour (themes their confetti + result), a face, a trail colour
    for the ball, and their own win call-out. Zero effect on RTP. */
 const CHARACTERS = [
-  {id:'drip', name:'Drip',  tag:'Pure drip',       face:'😎', color:'#39ff7a', trail:'#39ff7a', cel:'TOO MUCH DRIP! 💧'},
-  {id:'ice',  name:'Ice',   tag:'Ice-cold closer', face:'🥶', color:'#5db8ff', trail:'#bfe6ff', cel:'ICE COLD! ❄️'},
-  {id:'mic',  name:'Mic',   tag:'Rapper energy',   face:'🎤', color:'#ff5db8', trail:'#ff8de1', cel:'DROP THE MIC! 🎤'},
-  {id:'baller',name:'Baller',tag:'Baller',         face:'⚽', color:'#ffd34d', trail:'#ffe27a', cel:'GOLAZO! ⚽'},
-  {id:'boss', name:'Boss',  tag:'Influencer',      face:'👑', color:'#c07bff', trail:'#d9b3ff', cel:'BOSS MOVE! 👑'},
-  {id:'ace',  name:'Ace',   tag:'Streetwear pro',  face:'🧢', color:'#ff8c42', trail:'#ffb37a', cel:'ACE VIBES! 🔥'}
+  {id:'drip', name:'Drip',  tag:'Pure drip',       face:'😎', color:'#39ff7a', trail:'#39ff7a', cel:'TOO MUCH DRIP! 💧', pose:'lean',  burst:'💧'},
+  {id:'ice',  name:'Ice',   tag:'Ice-cold closer', face:'🥶', color:'#5db8ff', trail:'#bfe6ff', cel:'ICE COLD! ❄️',     pose:'cross', burst:'❄️'},
+  {id:'mic',  name:'Mic',   tag:'Rapper energy',   face:'🎤', color:'#ff5db8', trail:'#ff8de1', cel:'DROP THE MIC! 🎤', pose:'mic',   burst:'🎤'},
+  {id:'baller',name:'Baller',tag:'Baller',         face:'⚽', color:'#ffd34d', trail:'#ffe27a', cel:'GOLAZO! ⚽',       pose:'slide', burst:'⚽'},
+  {id:'boss', name:'Boss',  tag:'Influencer',      face:'👑', color:'#c07bff', trail:'#d9b3ff', cel:'BOSS MOVE! 👑',    pose:'crown', burst:'👑'},
+  {id:'ace',  name:'Ace',   tag:'Streetwear pro',  face:'🧢', color:'#ff8c42', trail:'#ffb37a', cel:'ACE VIBES! 🔥',    pose:'flex',  burst:'🔥'}
 ];
 function curChar(){ return CHARACTERS[S.character] || CHARACTERS[0]; }
 function loadChar(){ try{ const i=CHARACTERS.findIndex(c=>c.id===localStorage.getItem('plugChar')); return i<0?0:i; }catch(e){ return 0; } }
@@ -309,6 +309,7 @@ const S = {
   outcome:null, rest:null, distM:null, riding:false, speed:1,
   /* broadcast camera + replay */
   camMode:'wide', cam:{x:210, y:342, z:1}, flash:0, lb:0, ballTrail:[],
+  swingT:null, celebrate:null,
   rec:[], recT:0, replayed:false, replayT:0, replayIdx:0, replayEnd:0,
   replayDone:null, prevOn:true, forceMult:null
 };
@@ -514,6 +515,7 @@ async function swing(){
   S.phase='flight';
   $('lockAim').classList.add('hidden');
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
+  S.swingT=0;                                                // golfer swings at the tee
   cutTo('tee');                                              // broadcast: tee cam
   prompt('');
   if(S.quality>0.92) caption('PURE STRIKE!','pop');
@@ -825,8 +827,13 @@ function tickReplay(dt){
 function toResult(){
   S.tl=null; $('vign').classList.remove('on');
   /* hole-in-ones get an automatic broadcast replay before the result card */
-  if(S.outcome.mult>=25 && !S.replayed){ S.replayed=true; startReplay(showResult); return; }
-  showResult();
+  if(S.outcome.mult>=25 && !S.replayed){ S.replayed=true; startReplay(()=>celebrateThen(showResult)); return; }
+  celebrateThen(showResult);
+}
+/* on a win, the golfer plays their signature celebration, then the card shows */
+function celebrateThen(done){
+  if(S.outcome.mult>=2){ S.phase='celebrate'; startCelebration(curChar(), done); }
+  else done();
 }
 function showResult(){
   S.phase='result';
@@ -981,6 +988,94 @@ function drawPowerUI(){
   cx.fillStyle='rgba(255,255,255,.9)';
   cx.beginPath(); cx.arc(bx,by,9,0,7); cx.fill();
 }
+/* ---------- golfer figure (procedural, emoji-headed) ---------- */
+function drawFigure(x,y,s,o){
+  // o: {color, face, armL, armR, legL, legR, lean, club, clubAng, prop, propDy}
+  cx.save(); cx.translate(x,y); cx.rotate(o.lean||0);
+  cx.lineCap='round';
+  // legs
+  cx.strokeStyle='#2a2f33'; cx.lineWidth=5*s;
+  cx.beginPath(); cx.moveTo(0,0); cx.lineTo(Math.cos(o.legL)*16*s, 18*s+Math.sin(o.legL)*4*s); cx.stroke();
+  cx.beginPath(); cx.moveTo(0,0); cx.lineTo(Math.cos(o.legR)*16*s, 18*s+Math.sin(o.legR)*4*s); cx.stroke();
+  // body
+  cx.fillStyle=o.color;
+  cx.beginPath(); cx.roundRect(-8*s,-24*s,16*s,26*s,6*s); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.18)'; cx.beginPath(); cx.roundRect(-8*s,-24*s,6*s,26*s,4*s); cx.fill();
+  // arms
+  cx.strokeStyle=o.color; cx.lineWidth=5*s;
+  const sh=-16*s;
+  const hL={x:Math.cos(o.armL)*15*s, y:sh+Math.sin(o.armL)*15*s};
+  const hR={x:Math.cos(o.armR)*15*s, y:sh+Math.sin(o.armR)*15*s};
+  cx.beginPath(); cx.moveTo(-6*s,sh); cx.lineTo(hL.x,hL.y); cx.stroke();
+  cx.beginPath(); cx.moveTo(6*s,sh);  cx.lineTo(hR.x,hR.y); cx.stroke();
+  // club (held between hands)
+  if(o.club){
+    cx.save(); cx.translate((hL.x+hR.x)/2,(hL.y+hR.y)/2); cx.rotate(o.clubAng);
+    cx.strokeStyle='#dfe6ea'; cx.lineWidth=3*s;
+    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(0,44*s); cx.stroke();
+    cx.fillStyle='#b9c4bd'; cx.beginPath(); cx.ellipse(3*s,44*s,6*s,3*s,0,0,7); cx.fill();
+    cx.restore();
+  }
+  // head (emoji)
+  cx.font=`${22*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(o.face, 0, -34*s);
+  // prop emoji (mic / ball / crown) near a hand
+  if(o.prop){ cx.font=`${18*s}px serif`; cx.fillText(o.prop, hR.x, hR.y+(o.propDy||0)); }
+  cx.restore();
+}
+/* golfer at the tee: at address during aim/power, mid-swing at launch */
+function drawTeeGolfer(){
+  const teeVisible = S.phase==='aim'||S.phase==='power'||(S.phase==='flight'&&S.swingT!=null&&S.swingT<0.55);
+  if(!teeVisible) return;
+  const ch=curChar();
+  let clubAng=-2.3, lean=0;                          // address
+  if(S.swingT!=null){
+    const k=Math.min(1,S.swingT/0.5);
+    clubAng = -2.3 + k*4.6;                           // backswing → follow-through
+    lean = Math.sin(k*Math.PI)*0.12;
+  }
+  drawFigure(TEE.x-16, TEE.y-6, 1, {color:ch.color, face:ch.face,
+    armL:-1.4, armR:-1.75, legL:2.5, legR:0.7, lean, club:true, clubAng});
+}
+/* signature celebration poses */
+function poseFor(pose,k){
+  const bob=Math.sin(k*Math.PI*3)*0.06;
+  switch(pose){
+    case 'mic':   return {armL:-1.5, armR:-2.5-Math.sin(k*6)*0.2, legL:2.6, legR:0.5, lean:bob, prop:'🎤', propDy:-2};
+    case 'slide': return {armL:-2.4, armR:-0.8, legL:2.9, legR:2.2, lean:0.5, prop:'⚽', propDy:16};
+    case 'crown': return {armL:-2.5, armR:-0.6, legL:2.5, legR:0.6, lean:bob, prop:null};
+    case 'cross': return {armL:-0.3, armR:-2.8, legL:2.5, legR:0.6, lean:0, prop:null};
+    case 'flex':  return {armL:-2.7, armR:-0.4, legL:2.5, legR:0.6, lean:bob, prop:null};
+    default:      return {armL:-2.3, armR:-0.8, legL:2.5, legR:0.6, lean:bob, prop:null}; // lean
+  }
+}
+function drawCelebration(){
+  if(!S.celebrate) return;
+  const c=S.celebrate, ch=c.char, k=c.t/c.dur;
+  // screen-space, bottom-centre so it always reads regardless of camera
+  const x=W/2, y=H-150, pop=Math.min(1,c.t/0.18), s=2.0*pop*(1+Math.sin(k*Math.PI)*0.06);
+  const p=poseFor(ch.pose,k);
+  if(ch.pose==='crown'){ cx.font=`${26*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
+    cx.save(); cx.translate(x,y-64*s); cx.rotate(Math.sin(c.t*6)*0.2); cx.fillText('👑',0,0); cx.restore(); }
+  drawFigure(x,y,s,{color:ch.color, face:ch.face, ...p});
+  // call-out
+  cx.font='900 italic 22px sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.globalAlpha=Math.min(1,pop*1.2);
+  cx.fillStyle='rgba(0,0,0,.5)'; cx.fillText(ch.cel, x+2, y-96*s+2);
+  cx.fillStyle=ch.color; cx.fillText(ch.cel, x, y-96*s);
+  cx.globalAlpha=1;
+}
+function startCelebration(char,done){
+  S.celebrate={char, t:0, dur:1.5, done};
+  // themed emoji burst
+  for(let i=0;i<16;i++){ const a=-Math.PI/2+spread_(0.9), v=120+Math.random()*160;
+    S.particles.push({type:'emoji',glyph:char.burst,x:W/2+spread_(60),y:H-180,
+      vx:Math.cos(a)*v, vy:Math.sin(a)*v, size:16+Math.random()*12, rot:spread_(3), vr:spread_(6), age:0, life:1.3+Math.random()*0.6, g:180});
+  }
+  sCrowdW();
+}
+function spread_(m){ return (Math.random()*2-1)*m; }
+
 function drawBall(){
   if(!S.ball.on){ S.ballTrail.length=0; return; }
   const b=S.ball, sc=(1+b.alt/260)*b.scale, by=b.y-b.alt*.55, ch=curChar();
@@ -1008,7 +1103,7 @@ function drawBall(){
   }
 }
 function drawWindHud(){
-  if(S.phase==='club'||S.phase==='result'||S.phase==='replay') return;
+  if(S.phase==='club'||S.phase==='result'||S.phase==='replay'||S.phase==='celebrate') return;
   const x=42,y=64;
   cx.fillStyle='rgba(8,12,10,.72)';
   cx.beginPath(); cx.roundRect(x-30,y-24,74,58,12); cx.fill();
@@ -1042,6 +1137,11 @@ function drawParticles(dt){
     }else if(p.type==='ring'){
       cx.globalAlpha=(1-k)*.8; cx.strokeStyle=p.color; cx.lineWidth=2*z;
       cx.beginPath(); cx.arc(at.x,at.y,(p.size+k*34)*z,0,7); cx.stroke();
+    }else if(p.type==='emoji'){
+      p.vy+=(p.g||0)*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vr*dt;
+      cx.save(); cx.globalAlpha=1-k*k; cx.translate(p.x,p.y); cx.rotate(p.rot);
+      cx.font=`${p.size}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText(p.glyph,0,0); cx.restore();
     }
     cx.globalAlpha=1;
   }
@@ -1094,6 +1194,8 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
   if(S.phase==='replay') tickReplay(dt); else tickTL(dt);
   if(S.phase==='flight') record(dt);
+  if(S.swingT!=null){ S.swingT+=dt; if(S.swingT>0.8) S.swingT=null; }
+  if(S.celebrate){ S.celebrate.t+=dt; if(S.celebrate.t>=S.celebrate.dur){ const d=S.celebrate.done; S.celebrate=null; d&&d(); } }
   updateCam(dt);
   // world pass, through the broadcast camera
   cx.save();
@@ -1101,11 +1203,13 @@ function frame(now){
   drawCourse();
   drawAimUI();
   drawPowerUI();
+  drawTeeGolfer();
   drawBall();
   cx.restore();
-  // screen pass: HUD, particles, weather, cinema bars
+  // screen pass: HUD, particles, weather, cinema bars, celebration
   drawWindHud();
   drawParticles(dt);
+  drawCelebration();
   drawWeather(dt);
   drawCinema(dt);
   requestAnimationFrame(frame);
@@ -1136,7 +1240,7 @@ if(RGS){
 
 /* ---------- debug / automated-test hooks ---------- */
 window.__plug = {
-  S, CFG, drawOutcome, tierFor,
+  S, CFG, CHARACTERS, drawOutcome, tierFor,
   autoShot(club, speed, forceMult){
     S.speed = speed||6; S.club = club||'driver';
     if(forceMult!=null) S.forceMult = forceMult;
@@ -1145,6 +1249,11 @@ window.__plug = {
     return new Promise(res=>{
       const iv=setInterval(()=>{ if(S.phase==='result'){ clearInterval(iv); S.speed=1; res(S.outcome); } },40);
     });
+  },
+  holdCelebration(idx){                    // debug: freeze a character's celebration
+    S.character=idx; S.phase='celebrate'; S.outcome={mult:5,tier:'tapIn'};
+    ['clubs','showcase','charPick','result','intro'].forEach(id=>$(id)?.classList.add('hidden'));
+    S.particles.length=0; startCelebration(CHARACTERS[idx], ()=>{}); S.celebrate.dur=999; S.celebrate.t=0.55;
   }
 };
 </script>

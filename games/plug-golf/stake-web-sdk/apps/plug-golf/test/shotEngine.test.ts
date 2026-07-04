@@ -102,6 +102,8 @@ const ids = new Set(CHARACTERS.map((c) => c.id));
 ok(ids.size === CHARACTERS.length, 'character ids are unique');
 ok(CHARACTERS.every((c) => /^#[0-9a-f]{6}$/i.test(c.color) && /^#[0-9a-f]{6}$/i.test(c.trail)), 'character colours are valid hex');
 ok(CHARACTERS.every((c) => c.name && c.face && c.cel && c.tag), 'every character has name/face/call-out/tag');
+const POSES = new Set(['lean', 'cross', 'mic', 'slide', 'crown', 'flex']);
+ok(CHARACTERS.every((c) => POSES.has(c.pose) && c.burst), 'every character has a valid celebration pose + burst emoji');
 ok(characterById(DEFAULT_CHARACTER).id === DEFAULT_CHARACTER && characterById('nope').id === CHARACTERS[0].id, 'characterById resolves default + fallback');
 
 console.log(failures === 0 ? '\nALL SHOT-ENGINE TESTS PASS ✓' : `\n${failures} ASSERTION(S) FAILED ✗`);

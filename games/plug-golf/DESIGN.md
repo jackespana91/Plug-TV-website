@@ -160,11 +160,14 @@ TV-coverage presentation on top of the story timeline:
   system already proves the pattern.
 - **Characters** *(implemented)* — the identity layer that makes it *The Plug
   Golf*: a roster of streetwear golfers (Drip / Ice / Mic / Baller / Boss / Ace),
-  each with an accent colour, a coloured ball-trail ("the drip"), and their own
-  win call-out on the result card. Selectable from a HUD avatar chip, persisted
-  in localStorage, plus a branded intro splash. All cosmetic, zero RTP effect.
-  Roster data is shared, typechecked, and tested (`src/game/characters.ts`).
-  Still open: unique per-character swing intros and celebration animations, and
+  each with an accent colour, a coloured ball-trail ("the drip"), their own win
+  call-out, **a procedural golfer figure that swings at the tee**, and **a
+  signature win celebration** — a distinct pose (Mic raises a mic, Boss throws up
+  a crown, Baller slides, Ace flexes…) with a themed emoji burst and their
+  call-out, played before the result card. Selectable from a HUD avatar chip,
+  persisted in localStorage, plus a branded intro splash. All cosmetic, zero RTP
+  effect. Roster data (incl. pose + burst) is shared, typechecked, and tested
+  (`src/game/characters.ts`). Still open: fuller per-character swing rigs and
   unlockable skins.
 - **Sunday Masters as true feature-buy** — currently a 6th mode at equal stake;
   production version becomes a paid-entry event (e.g. 50x stake buys N shots on an
