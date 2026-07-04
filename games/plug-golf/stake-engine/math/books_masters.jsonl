@@ -1,0 +1,8 @@
+{"id":1,"events":[{"index":0,"type":"shot","club":"masters","tier":"lose"},{"index":1,"type":"finalWin","amount":0}],"payoutMultiplier":0}
+{"id":2,"events":[{"index":0,"type":"shot","club":"masters","tier":"bunker"},{"index":1,"type":"finalWin","amount":50}],"payoutMultiplier":50}
+{"id":3,"events":[{"index":0,"type":"shot","club":"masters","tier":"green"},{"index":1,"type":"finalWin","amount":100}],"payoutMultiplier":100}
+{"id":4,"events":[{"index":0,"type":"shot","club":"masters","tier":"closePutt"},{"index":1,"type":"finalWin","amount":200}],"payoutMultiplier":200}
+{"id":5,"events":[{"index":0,"type":"shot","club":"masters","tier":"tapIn"},{"index":1,"type":"finalWin","amount":500}],"payoutMultiplier":500}
+{"id":6,"events":[{"index":0,"type":"shot","club":"masters","tier":"lipOut"},{"index":1,"type":"finalWin","amount":1000}],"payoutMultiplier":1000}
+{"id":7,"events":[{"index":0,"type":"shot","club":"masters","tier":"holeIn"},{"index":1,"type":"finalWin","amount":2500}],"payoutMultiplier":2500}
+{"id":8,"events":[{"index":0,"type":"shot","club":"masters","tier":"holeIn"},{"index":1,"type":"finalWin","amount":10000}],"payoutMultiplier":10000}

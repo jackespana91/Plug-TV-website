@@ -159,6 +159,31 @@
 
 const CFG = JSON.parse(document.getElementById('paytables').textContent);
 
+/* ---------- engine backends: Stake Engine RGS, or local demo RNG ----------
+   When launched by Stake Engine the game URL carries ?sessionID=…&rgs_url=….
+   In that case ALL money flow goes through the RGS: authenticate on boot,
+   wallet/play at swing (the server draws the weighted book), end-round to
+   settle. Without those params the game runs the same paytables locally as
+   a fun-credit demo. Amounts on the wire are micro-units (1_000_000 = 1.00). */
+const QS = new URLSearchParams(location.search);
+const RGS = (QS.get('rgs_url') && QS.get('sessionID')) ? {
+  url: (u => u.startsWith('http') ? u : 'https://' + u)(QS.get('rgs_url')).replace(/\/+$/, ''),
+  sessionID: QS.get('sessionID'),
+  currency: QS.get('currency') || 'USD'
+} : null;
+const MICRO = 1e6;
+/* client club key -> math package mode name (stake-engine/math/index.json) */
+const MODE_NAME = {wedge:'wedge', shortIron:'short_iron', longIron:'long_iron',
+                   threeWood:'three_wood', driver:'driver', masters:'masters'};
+async function rgsCall(path, body){
+  const res = await fetch(RGS.url + path, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(Object.assign({sessionID:RGS.sessionID}, body||{}))
+  });
+  if(!res.ok) throw new Error('RGS ' + path + ' ' + res.status);
+  return res.json();
+}
+
 /* ---------- canvas & scale ---------- */
 const W = 420, H = 760;
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -322,18 +347,38 @@ function toPower(){
   prompt('Pull the ball back… release to swing','hit the green band for a PURE strike');
 }
 $('lockAim').onclick=()=>{ tone(560,.06,'triangle',.08); toPower(); };
-$('again').onclick =()=>{ if(S.balance<S.bet){ S.balance=1000; refreshHud(); caption('Credits reset','small'); } toAim(); };
+$('again').onclick =()=>{ if(!RGS && S.balance<S.bet){ S.balance=1000; refreshHud(); caption('Credits reset','small'); } toAim(); };
 $('switch').onclick=()=>toClub();
 
 /* ---------- the swing: RNG first, story second ---------- */
-function swing(){
+async function swing(){
+  if(S.swinging) return;
   if(S.balance < S.bet){ caption('Not enough credits','small'); toAim(); return; }
-  S.balance -= S.bet; refreshHud();
-
+  S.swinging = true;
   S.quality = Math.max(0, 1 - Math.abs(S.pull-0.85)/0.35);   // cosmetic only
-  const mult = S.forceMult!=null ? S.forceMult : drawOutcome(S.club); // ← the real result
-  S.forceMult = null;
-  S.outcome = {mult, tier:tierFor(mult)};
+
+  let mult, serverTier = null;
+  if(RGS){
+    try{
+      const r = await rgsCall('/wallet/play',
+        {amount: Math.round(S.bet*MICRO), mode: MODE_NAME[S.club], currency: RGS.currency});
+      S.balance = r.balance.amount/MICRO;                    // bet already deducted server-side
+      const round = r.round || {};
+      mult = (round.payoutMultiplier||0)/100;                // ×100 integer per Stake spec
+      const ev = round.events || (round.state&&round.state.events);
+      if(Array.isArray(ev) && ev[0] && ev[0].tier) serverTier = ev[0].tier;
+    }catch(e){
+      S.swinging = false;
+      caption('Connection lost — shot not placed','small');
+      toAim(); return;
+    }
+  }else{
+    S.balance -= S.bet;
+    mult = S.forceMult!=null ? S.forceMult : drawOutcome(S.club); // ← the real result
+    S.forceMult = null;
+  }
+  S.swinging = false; refreshHud();
+  S.outcome = {mult, tier: serverTier || tierFor(mult)};
   buildShot();                                               // theatre to match
   S.phase='flight';
   $('lockAim').classList.add('hidden');
@@ -657,7 +702,13 @@ function toResult(){
 function showResult(){
   S.phase='result';
   const o=S.outcome, win=o.mult*S.bet;
-  S.balance += win; refreshHud();
+  if(RGS){                                   // settle: end-round credits the win
+    rgsCall('/wallet/end-round').then(r=>{ S.balance=r.balance.amount/MICRO; refreshHud(); })
+      .catch(()=>caption('Settle failed — balance will sync','small'));
+  }else{
+    S.balance += win;
+  }
+  refreshHud();
   const m=$('rMult');
   m.textContent=(o.mult%1?o.mult.toFixed(1):o.mult)+'x';
   m.className='mult'+(o.mult>=10?' big':o.mult>=1?' win':'');
@@ -916,6 +967,27 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 toClub();
+
+/* ---------- RGS boot: real balance + operator bet levels ---------- */
+if(RGS){
+  document.getElementById('foot').textContent =
+    'Connected to Stake Engine RGS · RTP 96.0% all modes · outcome drawn server-side at release';
+  (async()=>{
+    try{
+      const r = await rgsCall('/wallet/authenticate');
+      S.balance = r.balance.amount/MICRO;
+      const c = r.config||{};
+      if(Array.isArray(c.betLevels) && c.betLevels.length){
+        S.betSteps = c.betLevels.map(v=>v/MICRO);
+        S.betI = Math.min(1, S.betSteps.length-1);
+        S.bet = S.betSteps[S.betI];
+      }
+      refreshHud();
+    }catch(e){
+      caption('RGS authentication failed','small');
+    }
+  })();
+}
 
 /* ---------- debug / automated-test hooks ---------- */
 window.__plug = {

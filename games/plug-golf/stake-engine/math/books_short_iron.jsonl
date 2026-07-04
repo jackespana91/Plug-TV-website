@@ -1,0 +1,8 @@
+{"id":1,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"lose"},{"index":1,"type":"finalWin","amount":0}],"payoutMultiplier":0}
+{"id":2,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"rough"},{"index":1,"type":"finalWin","amount":20}],"payoutMultiplier":20}
+{"id":3,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"bunker"},{"index":1,"type":"finalWin","amount":50}],"payoutMultiplier":50}
+{"id":4,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"fringe"},{"index":1,"type":"finalWin","amount":80}],"payoutMultiplier":80}
+{"id":5,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"green"},{"index":1,"type":"finalWin","amount":100}],"payoutMultiplier":100}
+{"id":6,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"closePutt"},{"index":1,"type":"finalWin","amount":200}],"payoutMultiplier":200}
+{"id":7,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"tapIn"},{"index":1,"type":"finalWin","amount":300}],"payoutMultiplier":300}
+{"id":8,"events":[{"index":0,"type":"shot","club":"shortIron","tier":"lipOut"},{"index":1,"type":"finalWin","amount":1000}],"payoutMultiplier":1000}

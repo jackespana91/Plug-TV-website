@@ -99,10 +99,10 @@ the volatility slider. Casual players live on the Wedge; degens live on the Driv
 
 ### 4.3 Production notes
 
-- Prototype uses `Math.random()`; production must draw server-side from a certified
-  RNG and settle the bet before the animation streams to the client (client receives
-  `{multiplier, tier, seed}` and renders theatre). Provably-fair (server seed +
-  client seed + nonce) drops in cleanly here if targeting crypto casinos.
+- **Target platform: Stake Engine** (see §7). The game's outcome-first architecture
+  maps 1:1 onto Stake's pre-simulated books model: the RGS draws a weighted
+  simulation server-side and the client renders theatre. In demo mode (no RGS
+  params) the prototype draws the same paytables locally with `Math.random()`.
 - **Compliance flags to review per jurisdiction** before certification:
   - *Skill presentation:* aim/power must be disclosed as non-outcome-affecting in the
     rules screen (standard for this genre, but wording matters).
@@ -163,7 +163,64 @@ TV-coverage presentation on top of the story timeline:
 - **Share clip export** — the camera cuts and slow-mo replay are in (§5.1); the
   remaining piece is one-tap export of the replay as a video/GIF for socials.
 
-## 7. Running the prototype
+## 7. Stake Engine integration
+
+Plug Golf is built for **Stake Engine** (stake-engine.com). Stake's RGS works on
+pre-simulated *books*: at bet time the RGS picks a simulation weighted by a lookup
+table and returns its `payoutMultiplier` + `events`; the client only plays back the
+story. That is literally this game's architecture, so the integration is thin.
+
+### 7.1 Math package (`stake-engine/`)
+
+`node stake-engine/generate-math.mjs` reads the paytable block out of `index.html`
+and emits Stake's required files into `stake-engine/math/`:
+
+- `books_<mode>.jsonl` — one line per outcome:
+  `{"id":N,"events":[{"type":"shot","tier":…},{"type":"finalWin",…}],"payoutMultiplier":INT}`
+  with the multiplier as an integer ×100 (e.g. `1150` = 11.5x) per Stake's spec.
+- `lookUpTable_<mode>.csv` — `simulationNumber,weight,payoutMultiplier`, payout
+  column matching the books exactly.
+- `index.json` — the mode manifest (name, cost, events file, weights file).
+
+Because the game is a discrete instant win, the outcome space is enumerated exactly
+(each paytable row = one simulation), so RTP is exact by construction — no Monte
+Carlo, no optimizer. The generator re-verifies 96.00% per mode from the emitted
+integer tables. Before upload, compress the books: `zstd math/books_*.jsonl`.
+
+Mode names on the wire: `wedge`, `short_iron`, `long_iron`, `three_wood`, `driver`,
+`masters`, all `cost: 1.0` (Masters can be repriced as a feature-buy by raising its
+mode cost — the table already carries the 100x top).
+
+### 7.2 Client RGS adapter (in `index.html`)
+
+When launched with Stake's query params (`?sessionID=…&rgs_url=…&currency=…`) the
+game switches from demo credits to the RGS wallet, with amounts in micro-units
+(1,000,000 = 1.00):
+
+- boot → `POST /wallet/authenticate` — real balance + operator bet levels
+  (`config.betLevels`) replace the demo defaults
+- swing release → `POST /wallet/play {amount, mode}` — server draws the book; the
+  client stages the animation from the returned tier and `payoutMultiplier/100`
+- result → `POST /wallet/end-round` — credits the win; balance re-synced from the
+  response. Connection failure at swing time aborts cleanly ("shot not placed").
+
+### 7.3 Local end-to-end harness
+
+`node stake-engine/mock-rgs.mjs` serves the *generated math package* through the
+RGS endpoints (weighted draw from the lookup tables, events from the books). Open
+`index.html?sessionID=test&rgs_url=http://127.0.0.1:8791` to play against it. The
+automated test drives rounds through this stack and asserts the client's rendered
+outcome equals the server's drawn book and that balances reconcile after settle.
+
+### 7.4 Remaining for submission
+
+- `zstd` compression of books + upload via the Stake Engine dashboard, then ACP
+  (Acceptance Criteria Process) checks on their side.
+- Decide Masters pricing (`cost` in `index.json`).
+- Operator-facing assets: game tile art, name, description, max-win statement
+  (currently 100x in Masters, 50x base game via Driver).
+
+## 8. Running the prototype
 
 Open `games/plug-golf/index.html` in any browser — single file, no build, no
 dependencies, works on mobile (touch) and desktop (mouse). Fun-credit balance only.
