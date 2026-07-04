@@ -36,3 +36,14 @@ The invariant that matters: **`generateRound` fixes the entire outcome the momen
 - **Committed-target mode** (math doc §8.5, GDD §20 — the Stake-Engine-compatible model): tap a rung to plant your flag, press DELIVER, and the whole round including the payout is resolved before the run starts. The ride is playback to the flag or the bust — no in-round input exists.
 - Three routes with live ladders, the rung ribbon, milestone wheelies, near-miss slow-motion on `dramatic` steps, envelopes (banked side pocket), Golden Newspaper rung boosts, Daily Big Paper reveal, Perfect Run celebration, max-win force-cashout.
 - Demo wallet (1,000.00, localStorage) — no real money, no server. Production would move `src/engine` behind a game server per math doc §10.
+
+## Adding new Ace sprite sheets
+
+Before wiring a new `ace_<pose>.png` into `scene.ts`, check it against the brief in one command:
+
+```bash
+pip install pillow  # dev-time only, not a project dependency
+python3 tools/check_sprite.py public/sprites/ace_ride.png --pose ride
+```
+
+Confirms real alpha transparency (not a flattened background), slices frames and checks the count against `docs/paperboy/04-character-art-brief.md`'s target table, flags any drift in the ground-contact point across frames (the cause of Ace visibly jumping when poses switch, §7 of the brief), and writes a labeled contact sheet next to the file for a quick visual pass.
