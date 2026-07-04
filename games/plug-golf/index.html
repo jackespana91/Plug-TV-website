@@ -28,9 +28,25 @@
   /* ---------- club select ---------- */
   #clubs{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
          padding:18px;background:linear-gradient(to top,rgba(5,8,6,.94) 55%,rgba(5,8,6,.25));border-radius:18px}
-  #clubs h2{font-size:20px;font-weight:900;margin-bottom:2px}
-  #clubs p.sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+  #clubs h2, #showcase h2{font-size:20px;font-weight:900;margin-bottom:2px}
+  #clubs p.sub, #showcase p.sub{color:var(--dim);font-size:12px;margin-bottom:14px;text-align:center;max-width:340px}
   .clubgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:360px}
+  #showcaseBtn{margin-top:12px;background:#241d08;color:var(--gold);border:1px solid #5a4a12;border-radius:999px;
+               padding:11px 22px;font-weight:800;font-size:13px;cursor:pointer;width:100%;max-width:360px}
+  #showcaseBtn:active{transform:scale(.98)}
+  /* ---------- showcase ---------- */
+  #showcase{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+            padding:18px;background:linear-gradient(to top,rgba(5,8,6,.96) 60%,rgba(5,8,6,.3));border-radius:18px}
+  .scgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;max-width:360px;max-height:56vh;overflow-y:auto}
+  .sc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px;text-align:left;cursor:pointer;color:var(--txt);transition:transform .08s,border-color .12s}
+  .sc:active{transform:scale(.97)}
+  .sc:hover{border-color:var(--gold)}
+  .sc .scm{font-weight:900;font-size:15px}
+  .sc .scn{color:var(--dim);font-size:11px;margin-top:2px}
+  .sc.win .scm{color:var(--plug)} .sc.big .scm{color:var(--gold)}
+  .sc.jackpot{grid-column:1 / -1;border-color:#5a4a12;background:linear-gradient(135deg,#1c1707,#141a16)}
+  #scClose{margin-top:12px;background:#1e2822;color:var(--txt);border:1px solid var(--line);border-radius:999px;
+           padding:11px 22px;font-weight:800;font-size:13px;cursor:pointer;width:100%;max-width:360px}
   .club{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-align:left;cursor:pointer;color:var(--txt);transition:transform .08s, border-color .12s}
   .club:active{transform:scale(.97)}
   .club:hover{border-color:var(--plug)}
@@ -123,6 +139,14 @@
       <h2>Pick your club</h2>
       <p class="sub">Same 96% RTP on every club — the club sets your volatility.</p>
       <div class="clubgrid" id="clubGrid"></div>
+      <button id="showcaseBtn">🎬 Showcase — preview any shot</button>
+    </div>
+
+    <div id="showcase" class="hidden">
+      <h2>Showcase</h2>
+      <p class="sub">Force any outcome and watch the full animation. (Preview only — real rounds are RNG.)</p>
+      <div class="scgrid" id="scGrid"></div>
+      <button id="scClose">← Back to clubs</button>
     </div>
 
     <button id="lockAim" class="hidden">LOCK AIM&nbsp;✓</button>
@@ -321,6 +345,34 @@ $('mute').onclick =()=>{ S.muted=!S.muted; $('mute').textContent=S.muted?'🔇':
   }
 })();
 
+/* ---------- showcase: force any outcome and watch it play ---------- */
+(function buildShowcase(){
+  const grid=$('scGrid');
+  // [multiplier, label, club used for the flight cosmetics, cssClass]
+  const shots=[
+    [0,   'Water / lose',   'driver',   ''],
+    [0.2, 'Deep rough',     'shortIron',''],
+    [0.5, 'Bunker splash',  'driver',   ''],
+    [0.8, 'Fringe',         'longIron', ''],
+    [1,   'Safe green',     'wedge',    'win'],
+    [2,   'Birdie putt',    'wedge',    'win'],
+    [5,   'Tap-in birdie',  'wedge',    'win'],
+    [10,  'Lip-out (eagle)','shortIron','big'],
+    [25,  'Hole in one',    'threeWood','big'],
+    [50,  'Hole in one',    'driver',   'big'],
+    [100, 'JACKPOT hole in one','masters','jackpot big'],
+  ];
+  for(const [mult,label,club,cls] of shots){
+    const el=document.createElement('button');
+    el.className='sc'+(cls?' '+cls:'');
+    el.innerHTML=`<div class="scm">${mult}x</div><div class="scn">${label}</div>`;
+    el.onclick=()=>{ tone(520,.07,'triangle',.09); $('showcase').classList.add('hidden'); S.speed=1; window.__plug.autoShot(club,1,mult); };
+    grid.appendChild(el);
+  }
+})();
+$('showcaseBtn').onclick=()=>{ tone(560,.06,'triangle',.08); $('clubs').classList.add('hidden'); $('showcase').classList.remove('hidden'); };
+$('scClose').onclick=()=>{ tone(440,.06,'sine',.06); $('showcase').classList.add('hidden'); $('clubs').classList.remove('hidden'); };
+
 /* ---------- phase transitions ---------- */
 function newRoundCosmetics(){
   S.weather = Math.floor(Math.random()*WEATHER.length);
@@ -330,6 +382,7 @@ function newRoundCosmetics(){
 function toClub(){
   S.phase='club'; S.camMode='wide'; S.ball={x:TEE.x,y:TEE.y,alt:0,on:true,scale:1};
   $('clubs').classList.remove('hidden'); $('result').classList.add('hidden');
+  $('showcase').classList.add('hidden');
   $('lockAim').classList.add('hidden'); prompt('');
   newRoundCosmetics();
 }
