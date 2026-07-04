@@ -11,6 +11,10 @@
  */
 import { hash01 } from './presentation';
 
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
 export const VIEW_W = 960;
 export const VIEW_H = 540;
 
@@ -29,9 +33,12 @@ const NEAR_Z = 40;
 
 const ROAD_NEAR = 210;
 const SIDEWALK_NEAR = 262;
-const HOUSE_LANE_NEAR = 420;
+const CURB_NEAR = 275;
+const HOUSE_LANE_NEAR = 350;
 const HAZARD_LANE_NEAR = 300;
-const POLE_LANE_NEAR = 470;
+const POLE_LANE_NEAR = 400;
+const LAMP_LANE_NEAR = 300;
+const PARKED_CAR_NEAR = 240;
 
 /** Ace's fixed screen anchor — left of the road centre; deliveries fan out to the right lane. */
 export const RIDER_X = VP_X - 92;
@@ -357,24 +364,51 @@ export class Scene {
     g.fillStyle = 'rgba(255,217,138,0.14)';
     g.fillRect(0, VP_Y, VIEW_W, 8);
 
-    // sidewalk + road trapezoids, apex at the vanishing point (the signature receding street)
+    // sidewalk + curb + road trapezoids, apex at the vanishing point (the signature receding street)
     this.trapezoid(g, SIDEWALK_NEAR, '#B8AFA4');
     g.fillStyle = 'rgba(255,233,196,0.15)';
     this.trapezoidPath(g, SIDEWALK_NEAR);
     g.fill();
+    this.sidewalkSeams(g, w);
+    this.trapezoid(g, CURB_NEAR, '#8E8578');
     this.trapezoid(g, ROAD_NEAR, '#5A5566');
     this.roadTexture(g, w);
 
-    // poles+wires and houses, far-to-near so nearer objects overlap farther ones
+    // poles+lamps+wires, parked cars, and houses — far-to-near so nearer objects overlap farther ones
     const first = Math.floor(w.scrollX / HOUSE_SPACING) - 1;
     const last = Math.floor((w.scrollX + 2400) / HOUSE_SPACING) + 1;
     const depths: number[] = [];
     for (let i = first; i <= last; i++) depths.push(i);
     depths.sort((a, b) => b - a); // far (large index) first
 
-    for (const i of depths) this.drawPole(g, i * HOUSE_SPACING - w.scrollX);
+    for (const i of depths) {
+      this.drawPole(g, i * HOUSE_SPACING - w.scrollX);
+      this.drawLamp(g, i * HOUSE_SPACING - w.scrollX + HOUSE_SPACING * 0.5);
+    }
     this.updateFireflies(g, w);
+    for (const i of depths) this.drawParkedCar(g, i * HOUSE_SPACING - w.scrollX + HOUSE_SPACING * 0.32, i);
     for (const i of depths) this.drawLot(g, i * HOUSE_SPACING - w.scrollX, i, i === w.targetHouse);
+  }
+
+  /** Perspective-consistent expansion joints, so the sidewalk band doesn't read as a flat slab. */
+  private sidewalkSeams(g: CanvasRenderingContext2D, w: World): void {
+    const spacing = 130;
+    const phase = ((w.scrollX % spacing) + spacing) % spacing;
+    g.strokeStyle = 'rgba(74,60,110,0.18)';
+    for (let n = 0; n < 12; n++) {
+      const distAhead = n * spacing - phase + 20;
+      if (distAhead < -20) continue;
+      const scale = depthScale(distAhead);
+      const y = projY(scale);
+      if (y > VIEW_H + 4) continue;
+      g.lineWidth = Math.max(0.6, 1.4 * scale);
+      g.beginPath();
+      g.moveTo(VP_X - ROAD_NEAR * scale, y);
+      g.lineTo(VP_X - SIDEWALK_NEAR * scale, y);
+      g.moveTo(VP_X + ROAD_NEAR * scale, y);
+      g.lineTo(VP_X + SIDEWALK_NEAR * scale, y);
+      g.stroke();
+    }
   }
 
   private trapezoidPath(g: CanvasRenderingContext2D, nearHalf: number): void {
@@ -446,6 +480,68 @@ export class Scene {
     g.moveTo(x, y - poleH * 0.78);
     g.quadraticCurveTo((x + nx) / 2, Math.max(y, ny) - Math.min(poleH, nPoleH) * 0.55, nx, ny - nPoleH * 0.78);
     g.stroke();
+  }
+
+  /** Streetlamp on the opposite side from the telephone poles — dusk glow, rhythmic depth cue. */
+  private drawLamp(g: CanvasRenderingContext2D, depth: number): void {
+    const scale = depthScale(depth);
+    if (scale < 0.05) return;
+    const y = projY(scale);
+    if (y > VIEW_H + 10 || y < VP_Y - 4) return;
+    const x = projX(scale, 1.02, LAMP_LANE_NEAR);
+    if (x < -60 || x > VIEW_W + 60) return;
+    const postH = 96 * scale;
+    const headY = y - postH - 4 * scale;
+
+    g.strokeStyle = '#3E4658';
+    g.lineWidth = Math.max(1, 4.5 * scale);
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x, headY); g.stroke();
+
+    const glow = g.createRadialGradient(x, headY, 1, x, headY, Math.max(2, 32 * scale));
+    glow.addColorStop(0, 'rgba(255,225,150,0.55)');
+    glow.addColorStop(1, 'rgba(255,225,150,0)');
+    g.fillStyle = glow;
+    g.beginPath(); g.arc(x, headY, Math.max(2, 32 * scale), 0, Math.PI * 2); g.fill();
+
+    g.strokeStyle = '#3E4658';
+    g.lineWidth = Math.max(1, 3 * scale);
+    g.beginPath(); g.arc(x, headY, Math.max(2, 7 * scale), Math.PI * 0.9, Math.PI * 2.1); g.stroke();
+    g.fillStyle = '#FFE9B0';
+    g.beginPath(); g.arc(x, headY, Math.max(1.5, 5 * scale), 0, Math.PI * 2); g.fill();
+  }
+
+  /** Cars parked along the curb — street texture, purely decorative. */
+  private drawParkedCar(g: CanvasRenderingContext2D, depth: number, i: number): void {
+    if (hash01(i, 70) > 0.5) return;
+    const scale = depthScale(depth);
+    if (scale < 0.08) return;
+    const y = projY(scale);
+    if (y > VIEW_H + 20 || y < VP_Y) return;
+    const lane = hash01(i, 71) < 0.5 ? -1 : 1;
+    const x = projX(scale, lane * 1.05, PARKED_CAR_NEAR);
+    if (x < -100 || x > VIEW_W + 100) return;
+    const colors = ['#4A6FA5', '#8A9A6E', '#B0B0B8', '#7A5048'];
+    const color = colors[Math.floor(hash01(i, 72) * colors.length)];
+
+    g.save();
+    g.translate(x, y);
+    g.scale(scale, scale);
+    g.fillStyle = VIOLET(0.3);
+    g.beginPath(); g.ellipse(0, 10, 34, 5, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(-32, 6); g.quadraticCurveTo(-34, -6, -24, -8);
+    g.lineTo(-14, -8); g.quadraticCurveTo(-8, -20, 6, -20);
+    g.lineTo(24, -8); g.quadraticCurveTo(34, -6, 32, 6);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,233,196,0.3)';
+    g.beginPath();
+    g.moveTo(-12, -19); g.quadraticCurveTo(6, -22, 20, -18);
+    g.lineTo(18, -14); g.quadraticCurveTo(4, -17, -10, -14);
+    g.closePath(); g.fill();
+    g.fillStyle = '#23273A';
+    g.beginPath(); g.arc(-18, 8, 7, 0, Math.PI * 2); g.arc(18, 8, 7, 0, Math.PI * 2); g.fill();
+    g.restore();
   }
 
   private updateFireflies(g: CanvasRenderingContext2D, w: World): void {
@@ -777,9 +873,17 @@ export class Scene {
 
   /* ---------------- Ace ---------------- */
 
+  /**
+   * Ace, seen from behind — the chase-cam view: he rides away from camera
+   * down the vanishing-point road, so the rig shows his back, shoulders and
+   * the back of his (backwards) cap, not a side profile. The delivery bag
+   * sits on his right hip so the throwing arm and the delivery lane (which
+   * fans right, per DELIVER_POINT) agree with each other.
+   */
   private drawRider(g: CanvasRenderingContext2D, w: World): void {
     w.bob += (w.speed > 10 ? 0.11 : 0.035);
     const bobY = w.pose === 'ride' ? Math.sin(w.bob) * 2.5 : 0;
+    const sway = w.pose === 'ride' ? Math.sin(w.bob * 0.5) * 3 : 0;
     const x = RIDER_X;
     const y = GROUND_Y - 18 + bobY;
     const spin = this.wheelAngle;
@@ -794,214 +898,196 @@ export class Scene {
         g.rotate(t * Math.PI * 1.6);
         g.translate(0, -t * 10);
       } else {
-        // sat up, dazed — stars handled by director
+        // sat up, dazed, facing camera — stars handled by director
         g.restore();
         this.drawCrashed(g, x, y, w.poseT);
         return;
       }
     } else if (w.pose === 'wheelie') {
-      g.translate(-26, 4);
-      g.rotate(-0.3 * Math.min(1, w.poseT * 3));
-      g.translate(26, -4);
+      g.translate(0, 4);
+      g.rotate(-0.14 * Math.min(1, w.poseT * 3));
+      g.translate(0, -4);
     } else if (w.pose === 'skid') {
-      g.rotate(0.16);
+      g.rotate(-0.06);
     } else if (w.pose === 'tuck') {
-      g.translate(0, 5);
+      g.translate(0, 6);
     }
 
-    // shadow
+    // ground shadow
     g.fillStyle = VIOLET(0.4);
     g.beginPath();
-    g.ellipse(2, 20, 44, 7, 0, 0, Math.PI * 2);
+    g.ellipse(sway * 0.4, 20, 30, 7, 0, 0, Math.PI * 2);
     g.fill();
 
-    // wheels
-    for (const wx of [-27, 27]) {
-      g.strokeStyle = '#23273A';
-      g.lineWidth = 5.5;
-      g.beginPath(); g.arc(wx, 4, 15, 0, Math.PI * 2); g.stroke();
-      if (fast) {
-        g.strokeStyle = 'rgba(139,144,163,0.5)';
-        g.lineWidth = 6;
-        g.beginPath(); g.arc(wx, 4, 9.5, spin, spin + 2.1); g.stroke();
-        g.beginPath(); g.arc(wx, 4, 9.5, spin + Math.PI, spin + Math.PI + 2.1); g.stroke();
-      } else {
-        g.strokeStyle = '#8B90A3';
-        g.lineWidth = 1.5;
-        for (let s = 0; s < 5; s++) {
-          const a = spin + (s * Math.PI * 2) / 5;
-          g.beginPath();
-          g.moveTo(wx, 4);
-          g.lineTo(wx + Math.cos(a) * 13, 4 + Math.sin(a) * 13);
-          g.stroke();
-        }
+    // rear wheel, dead-on from behind — the bike's whole visible wheel silhouette
+    g.save();
+    g.translate(sway * 0.5, 6);
+    g.strokeStyle = '#23273A';
+    g.lineWidth = 6;
+    g.beginPath(); g.arc(0, 0, 17, 0, Math.PI * 2); g.stroke();
+    if (fast) {
+      g.strokeStyle = 'rgba(139,144,163,0.5)';
+      g.lineWidth = 7;
+      g.beginPath(); g.arc(0, 0, 10, 0, Math.PI * 2); g.stroke();
+    } else {
+      g.strokeStyle = '#8B90A3';
+      g.lineWidth = 1.6;
+      for (let s = 0; s < 6; s++) {
+        const a = spin + (s * Math.PI * 2) / 6;
+        g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); g.stroke();
       }
-      g.fillStyle = '#8B90A3';
-      g.beginPath(); g.arc(wx, 4, 3, 0, Math.PI * 2); g.fill();
     }
+    g.fillStyle = '#8B90A3';
+    g.beginPath(); g.arc(0, 0, 3.4, 0, Math.PI * 2); g.fill();
+    g.restore();
 
-    // frame (BMX)
+    // seat post + seat
     g.strokeStyle = '#D64545';
     g.lineWidth = 4.5;
     g.lineCap = 'round';
-    g.beginPath();
-    g.moveTo(-27, 4); g.lineTo(-4, -16);       // seat stay
-    g.moveTo(-27, 4); g.lineTo(2, 2);          // chain stay
-    g.moveTo(2, 2); g.lineTo(-4, -16);         // seat tube
-    g.moveTo(-4, -16); g.lineTo(20, -14);      // top tube
-    g.moveTo(2, 2); g.lineTo(20, -14);         // down tube
-    g.moveTo(20, -14); g.lineTo(27, 4);        // fork
-    g.moveTo(22, -22); g.lineTo(20, -14);      // steerer
-    g.stroke();
-    // handlebar
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 3.5;
-    g.beginPath(); g.moveTo(17, -24); g.lineTo(28, -22); g.stroke();
-    // seat
+    g.beginPath(); g.moveTo(sway * 0.5, -6); g.lineTo(sway * 0.5, -20); g.stroke();
     g.fillStyle = '#23273A';
-    g.fillRect(-10, -20, 12, 4);
+    g.fillRect(sway * 0.5 - 7, -24, 14, 5);
 
-    // pedals + cranks
+    // pedalling legs, both visible side by side (behind view), alternating height
     const crank = spin * 0.55;
-    const pedal = (a: number) => ({ px: 2 + Math.cos(a) * 8, py: 2 + Math.sin(a) * 8 });
-    const p1 = pedal(crank);
-    const p2 = pedal(crank + Math.PI);
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 3;
-    g.beginPath(); g.moveTo(2, 2); g.lineTo(p1.px, p1.py); g.moveTo(2, 2); g.lineTo(p2.px, p2.py); g.stroke();
-
     const throwT = w.pose === 'throw' ? Math.min(1, w.poseT * 2.5) : 0;
     const lean = Math.min(1, w.speed / 430);
+    for (const [lx, ph, color] of [[-11, 0, '#3E4658'], [11, Math.PI, '#4A5568']] as const) {
+      const bob = Math.sin(crank + ph);
+      const hipX = lx * 0.4 + sway * 0.4, hipY = -18;
+      const footX = lx * 0.9 + sway * 0.3, footY = 14 + bob * 8;
+      const kneeX = lx * 1.1, kneeY = -2 - bob * 3;
+      g.strokeStyle = color;
+      g.lineWidth = 5;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(hipX, hipY);
+      g.quadraticCurveTo(kneeX, kneeY, footX, footY);
+      g.stroke();
+      g.fillStyle = '#F4F1E8';
+      g.fillRect(footX - 4, footY - 2, 8, 4);
+    }
 
-    // far leg (behind bag)
-    this.leg(g, -2, -16, p2.px, p2.py, '#3E4658');
-
-    // canvas paper bag with rolled papers
-    g.fillStyle = '#D9C79E';
-    g.beginPath();
-    g.ellipse(-15, -20, 10, 12, -0.28, 0, Math.PI * 2);
+    // torso — jacket back, shoulders, diagonal bag strap to a right-hip bag
+    g.save();
+    g.translate(sway * 0.6, -30);
+    g.rotate(lean * 0.05);
+    g.fillStyle = '#3A6BC5';
+    this.rr(g, -13, -16, 26, 28, 9);
     g.fill();
+    g.fillStyle = '#2E55A0';
+    this.rr(g, -13, 4, 26, 10, 5);
+    g.fill();
+    // jacket hem fluttering (the constant speed tell — art doc §4)
+    const flap = Math.sin(this.t * 16) * (2 + lean * 4);
+    g.fillStyle = '#2E55A0';
+    g.beginPath();
+    g.moveTo(-13, 12);
+    g.quadraticCurveTo(-17 - lean * 5, 16 + flap * 0.4, -13 - lean * 7, 21 + flap);
+    g.lineTo(-8, 19);
+    g.closePath();
+    g.fill();
+    // diagonal bag strap across the back
+    g.strokeStyle = '#B8A26E';
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(-10, -14); g.lineTo(11, 11); g.stroke();
+    // canvas bag at the right hip, rolled papers peeking out
+    g.fillStyle = '#D9C79E';
+    g.beginPath(); g.ellipse(13, 13, 9, 11, 0.2, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#B8A26E';
     g.lineWidth = 2;
     g.stroke();
     for (let p = 0; p < 3; p++) {
       g.fillStyle = p === 1 ? '#EDE8DA' : '#F4F1E8';
       g.save();
-      g.translate(-18 + p * 4, -30);
-      g.rotate(-0.5 + p * 0.16);
+      g.translate(9 + p * 3, 4);
+      g.rotate(-0.4 + p * 0.16);
       g.fillRect(-2, -4, 4.5, 9);
       g.restore();
     }
-
-    // torso — blue jacket leaning with speed
-    g.save();
-    g.translate(-3, -28);
-    g.rotate(0.12 + lean * 0.16 + (w.pose === 'tuck' ? 0.22 : 0));
-    g.fillStyle = '#3A6BC5';
-    this.rr(g, -9, -14, 19, 30, 8);
-    g.fill();
-    g.fillStyle = '#2E55A0';
-    this.rr(g, -9, 6, 19, 10, 5);
-    g.fill();
-    // jacket flap fluttering (the constant speed tell — art doc §4)
-    const flap = Math.sin(this.t * 16) * (2 + lean * 4);
-    g.fillStyle = '#2E55A0';
-    g.beginPath();
-    g.moveTo(-9, 8);
-    g.quadraticCurveTo(-16 - lean * 6, 10 + flap * 0.4, -14 - lean * 8, 16 + flap);
-    g.lineTo(-8, 15);
-    g.closePath();
-    g.fill();
-    // bag strap
-    g.strokeStyle = '#B8A26E';
-    g.lineWidth = 3.5;
-    g.beginPath(); g.moveTo(6, -10); g.lineTo(-10, 8); g.stroke();
     g.restore();
 
-    // near leg (over frame)
-    this.leg(g, -2, -14, p1.px, p1.py, '#4A5568');
-    // sneaker
-    g.fillStyle = '#F4F1E8';
-    g.fillRect(p1.px - 3, p1.py - 2, 8, 4);
-
-    // arm: steering or throwing
+    // left arm — steady on the grip
     g.strokeStyle = '#3A6BC5';
     g.lineWidth = 5;
+    g.lineCap = 'round';
     g.beginPath();
-    if (throwT > 0) {
-      const aa = -2.1 + throwT * 2.5;
-      g.moveTo(1, -38);
-      g.quadraticCurveTo(6, -44, 1 + Math.cos(aa) * 21, -38 + Math.sin(aa) * 21);
-    } else {
-      g.moveTo(1, -36);
-      g.quadraticCurveTo(12, -32, 21, -24);
-    }
+    g.moveTo(sway * 0.6 - 10, -40);
+    g.quadraticCurveTo(sway * 0.6 - 17, -34, sway * 0.6 - 20, -25);
     g.stroke();
     g.fillStyle = '#F0C49A';
-    if (throwT > 0) {
-      const aa = -2.1 + throwT * 2.5;
-      g.beginPath(); g.arc(1 + Math.cos(aa) * 21, -38 + Math.sin(aa) * 21, 3.5, 0, Math.PI * 2); g.fill();
-    } else {
-      g.beginPath(); g.arc(21, -24, 3.5, 0, Math.PI * 2); g.fill();
-    }
+    g.beginPath(); g.arc(sway * 0.6 - 20, -25, 3.5, 0, Math.PI * 2); g.fill();
 
-    // head — backwards red cap, hair tuft, big eye, grin
-    const headX = 5, headY = -50;
-    g.fillStyle = '#F0C49A';
-    g.beginPath(); g.arc(headX, headY, 10, 0, Math.PI * 2); g.fill();
-    // hair tuft at the front
-    g.fillStyle = '#6E4A2C';
+    // right arm — on the grip, or reaching to the bag then swinging the throw out to the right
+    g.strokeStyle = '#3A6BC5';
     g.beginPath();
-    g.arc(headX + 7, headY - 5, 4, 0, Math.PI * 2);
-    g.fill();
-    // cap (backwards)
-    g.fillStyle = '#D64545';
-    g.beginPath();
-    g.arc(headX - 1, headY - 3, 10, Math.PI * 0.9, Math.PI * 2.05);
-    g.fill();
-    g.fillStyle = '#B23A3A';
-    this.rr(g, headX - 15, headY - 7, 9, 6, 2.5);
-    g.fill();
-    g.fillStyle = '#F4F1E8';
-    g.beginPath(); g.arc(headX - 1, headY - 10, 2.2, 0, Math.PI * 2); g.fill(); // cap button
-    // face
-    g.fillStyle = '#23273A';
-    g.beginPath(); g.arc(headX + 5, headY - 1, 2, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 1.6;
-    g.beginPath();
-    g.arc(headX + 3, headY + 3, 4, 0.15, Math.PI * 0.75);
+    let handX: number, handY: number;
+    if (throwT > 0 && throwT < 0.4) {
+      const p = throwT / 0.4;
+      handX = lerp(sway * 0.6 + 10, 12, p);
+      handY = lerp(-40, 6, p);
+      g.moveTo(sway * 0.6 + 10, -40);
+      g.quadraticCurveTo(sway * 0.6 + 20, -18, handX, handY);
+    } else if (throwT >= 0.4) {
+      const p = (throwT - 0.4) / 0.6;
+      const aa = -1.7 + p * 2.3;
+      handX = 14 + Math.cos(aa) * 28;
+      handY = 4 + Math.sin(aa) * 28 - p * 14;
+      g.moveTo(sway * 0.6 + 10, -34);
+      g.quadraticCurveTo(24, -8, handX, handY);
+    } else {
+      handX = sway * 0.6 + 20;
+      handY = -25;
+      g.moveTo(sway * 0.6 + 10, -40);
+      g.quadraticCurveTo(sway * 0.6 + 17, -34, handX, handY);
+    }
     g.stroke();
-    g.fillStyle = 'rgba(255,138,157,0.5)';
-    g.beginPath(); g.arc(headX + 8, headY + 3, 2.4, 0, Math.PI * 2); g.fill(); // blush
+    g.fillStyle = '#F0C49A';
+    g.beginPath(); g.arc(handX, handY, 3.5, 0, Math.PI * 2); g.fill();
+
+    // head — backwards cap seen from behind; glances back over the shoulder during a near-miss tuck
+    const turn = w.pose === 'tuck' ? 0.85 : 0;
+    g.save();
+    g.translate(sway * 0.7, -46);
+    g.fillStyle = '#F0C49A';
+    g.fillRect(-5, 2, 10, 8); // neck
+    g.fillStyle = '#6E4A2C';
+    g.fillRect(-7, -2, 14, 6); // hair peeking below the cap
+    g.fillStyle = '#F0C49A';
+    g.beginPath(); g.ellipse(turn * 4, -6, 9 - turn * 1.5, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#E0AE85';
+    g.beginPath(); g.arc(-7 + turn * 10, -4, 2.2, 0, Math.PI * 2); g.fill(); // ear
+    if (turn > 0.2) {
+      g.fillStyle = '#F0C49A';
+      g.beginPath(); g.arc(6 * turn, -5, 5 * turn, -0.6, 0.9); g.fill(); // cheek peeking
+      g.fillStyle = '#23273A';
+      g.beginPath(); g.arc(7 * turn, -6, 1.4, 0, Math.PI * 2); g.fill(); // eye
+      g.fillStyle = 'rgba(255,138,157,0.5)';
+      g.beginPath(); g.arc(8 * turn, -2, 2, 0, Math.PI * 2); g.fill(); // blush
+    }
+    // backwards cap: crown wraps the back/top of the head, brim peeks out low at the neck
+    g.fillStyle = '#D64545';
+    g.beginPath(); g.arc(turn * 3, -9, 9.5, Math.PI * 0.05, Math.PI * 1.5); g.fill();
+    g.beginPath(); g.ellipse(turn * 3, -1, 8, 3, 0, 0, Math.PI); g.fill();
+    g.fillStyle = '#F4F1E8';
+    g.beginPath(); g.arc(turn * 3, -14, 2, 0, Math.PI * 2); g.fill(); // cap button
     // warm rim light from the sun side (art doc §5)
     g.strokeStyle = 'rgba(255,233,196,0.85)';
     g.lineWidth = 2;
-    g.beginPath(); g.arc(headX, headY, 10, -0.9, 0.7); g.stroke();
+    g.beginPath(); g.arc(turn * 3 - 2, -9, 9.5, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
+    g.restore();
 
     g.restore();
 
     // tire dust when moving hard
     if (w.speed > 300 && Math.random() < 0.3) {
       this.particles.push({
-        x: x - 40, y: GROUND_Y + 4, vx: -60 - Math.random() * 60, vy: -20 - Math.random() * 30,
+        x: x - 20, y: GROUND_Y + 12, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30,
         age: 0, life: 0.5, size: 3 + Math.random() * 3, color: 'rgba(184,175,164,0.5)',
         gravity: -40, shape: 'glow', spin: 0,
       });
     }
-  }
-
-  private leg(g: CanvasRenderingContext2D, hx: number, hy: number, px: number, py: number, color: string): void {
-    // two-segment leg with a bent knee
-    const kx = (hx + px) / 2 + 7;
-    const ky = (hy + py) / 2 - 2;
-    g.strokeStyle = color;
-    g.lineWidth = 5;
-    g.lineCap = 'round';
-    g.beginPath();
-    g.moveTo(hx, hy);
-    g.quadraticCurveTo(kx, ky, px, py);
-    g.stroke();
   }
 
   private drawCrashed(g: CanvasRenderingContext2D, x: number, y: number, t: number): void {
