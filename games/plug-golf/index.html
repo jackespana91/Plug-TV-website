@@ -316,7 +316,7 @@ const S = {
   outcome:null, rest:null, distM:null, riding:false, speed:1,
   /* broadcast camera + replay */
   camMode:'wide', cam:{x:210, y:342, z:1}, flash:0, lb:0, ballTrail:[],
-  swingT:null, celebrate:null,
+  swingT:null, celebrate:null, shake:{t:0,dur:1,mag:0}, swungImpact:false,
   rec:[], recT:0, replayed:false, replayT:0, replayIdx:0, replayEnd:0,
   replayDone:null, prevOn:true, forceMult:null
 };
@@ -522,11 +522,10 @@ async function swing(){
   S.phase='flight';
   $('lockAim').classList.add('hidden');
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
-  S.swingT=0;                                                // golfer swings at the tee
+  S.swingT=0; S.swungImpact=false;                           // golfer swings; impact fires the strike
   cutTo('tee');                                              // broadcast: tee cam
   prompt('');
   if(S.quality>0.92) caption('PURE STRIKE!','pop');
-  sHit();
 }
 
 /* geometry helpers */
@@ -773,7 +772,7 @@ function buildShot(){
     segs.push(rollSeg(polar(GC,22,angTo(GC,rest)),polar(GC,R.hole+1.5,angTo(GC,rest)),.9,{slow:.45,onStart:()=>{$('vign').classList.add('on'); sCrowdO();}}));
     segs.push(lipSeg(0.8, R.hole+1.5, R.hole+2.5, .8, {slow:.4}));
     segs.push(rollSeg(polar(GC,R.hole+2.5,0),rest,.55,{slow:.5,
-      onEnd:()=>{ $('vign').classList.remove('on'); caption('LIPPED OUT!!','hold'); sCrowdW(); confetti(60); }}));
+      onEnd:()=>{ $('vign').classList.remove('on'); caption('LIPPED OUT!!','hold'); sCrowdW(); confetti(60); shake(4,.35); }}));
     segs.push(pauseSeg(1.2));
     play(segs,toResult); return;
   }
@@ -790,7 +789,7 @@ function buildShot(){
     $('vign').classList.remove('on');
     caption(mega?'HOOOOLE IN ONE!!!':'IT DROPPED!! 🏆','hold');
     document.getElementById('caption').classList.add('gold');
-    sCrowdW(); sFanfare(); confetti(mega?160:90,['#ffd34d','#fff','#39ff7a']);
+    sCrowdW(); sFanfare(); confetti(mega?160:90,['#ffd34d','#fff','#39ff7a']); shake(mega?9:6, mega?.7:.5);
     if(mega){ let n=0; const iv=setInterval(()=>{ firework(60+Math.random()*300,90+Math.random()*220); if(++n>7) clearInterval(iv); },260); }
   }}));
   segs.push(pauseSeg(mega?2.4:1.6));
@@ -1149,7 +1148,20 @@ function drawCelebration(){
   cx.fillStyle=ch.color; cx.fillText(ch.cel, x, y-96*s);
   cx.globalAlpha=1;
 }
+/* ---------- shot juice: screen-shake + impact turf ---------- */
+function shake(mag,dur){ S.shake={t:dur,dur:dur,mag}; }
+function impactFx(){
+  sHit(); shake(2,0.14);
+  // divot: turf + grass flecks kick up from the strike (world-space, on the tee)
+  for(let i=0;i<9;i++){ const a=-Math.PI/2+spread_(1.1), v=45+Math.random()*85;
+    S.particles.push({type:'dot',world:true,x:TEE.x+spread_(6),y:TEE.y-4,
+      vx:Math.cos(a)*v, vy:Math.sin(a)*v-24, size:2+Math.random()*2.2,
+      color:i<5?'#cdbb90':'#3f8f47', age:0, life:.45+Math.random()*.3, g:170}); }
+  // a quick puff ring at the ball
+  S.particles.push({type:'ring',world:true,x:TEE.x,y:TEE.y-6,age:0,life:.35,size:5,color:'rgba(230,220,190,.7)'});
+}
 function startCelebration(char,done){
+  shake(5,0.4);
   S.celebrate={char, t:0, dur:1.5, done};
   // themed emoji burst
   for(let i=0;i<16;i++){ const a=-Math.PI/2+spread_(0.9), v=120+Math.random()*160;
@@ -1281,12 +1293,19 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
   if(S.phase==='replay') tickReplay(dt); else tickTL(dt);
   if(S.phase==='flight') record(dt);
-  if(S.swingT!=null){ S.swingT+=dt; if(S.swingT>0.8) S.swingT=null; }
+  if(S.swingT!=null){
+    S.swingT+=dt;
+    if(!S.swungImpact && S.swingT>=0.11){ S.swungImpact=true; impactFx(); }  // club meets ball
+    if(S.swingT>0.8) S.swingT=null;
+  }
   if(S.celebrate){ S.celebrate.t+=dt; if(S.celebrate.t>=S.celebrate.dur){ const d=S.celebrate.done; S.celebrate=null; d&&d(); } }
   updateCam(dt);
-  // world pass, through the broadcast camera
+  // screen-shake offset (decays over its duration)
+  let shx=0,shy=0;
+  if(S.shake.t>0){ S.shake.t-=dt; const f=Math.max(0,S.shake.t/S.shake.dur); shx=spread_(1)*S.shake.mag*f; shy=spread_(1)*S.shake.mag*f; }
+  // world pass, through the broadcast camera (+ shake)
   cx.save();
-  cx.translate(W/2,AY); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
+  cx.translate(W/2+shx,AY+shy); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
   drawCourse();
   drawAimUI();
   drawPowerUI();
