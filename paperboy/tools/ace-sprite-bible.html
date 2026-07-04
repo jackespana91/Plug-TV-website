@@ -1,0 +1,463 @@
+<title>Ace — Sprite Production Bible</title>
+<style>
+  :root {
+    --ground: #0B0D14;
+    --panel: #171A26;
+    --panel-raised: #1E2236;
+    --edge: #2E3348;
+    --ink: #F2EFE6;
+    --ink-dim: #9299B0;
+    --gold: #FFC53D;
+    --violet: #8177C9;
+    --violet-dim: rgba(129,119,201,0.35);
+    --peach: #FF9E5E;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --display: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  :root[data-theme="light"] {
+    --ground: #F3F1EA;
+    --panel: #FFFFFF;
+    --panel-raised: #FBF9F3;
+    --edge: #E1DCCB;
+    --ink: #201C14;
+    --ink-dim: #6B6455;
+    --violet-dim: rgba(90,74,160,0.18);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #F3F1EA;
+      --panel: #FFFFFF;
+      --panel-raised: #FBF9F3;
+      --edge: #E1DCCB;
+      --ink: #201C14;
+      --ink-dim: #6B6455;
+      --violet-dim: rgba(90,74,160,0.18);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .page {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    background:
+      radial-gradient(120% 160% at 15% -20%, rgba(255,158,94,0.16), transparent 60%),
+      var(--panel);
+    border-bottom: 1px solid var(--edge);
+    padding: 40px 20px 28px;
+  }
+  .masthead-inner { max-width: 880px; margin: 0 auto; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(32px, 5.5vw, 46px);
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .dek {
+    font-size: 15.5px;
+    color: var(--ink-dim);
+    max-width: 62ch;
+    margin: 0 0 24px;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1px;
+    background: var(--edge);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .fact {
+    background: var(--panel-raised);
+    padding: 10px 14px;
+  }
+  .fact .k {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 3px;
+  }
+  .fact .v {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- sections ---------- */
+  section { padding: 44px 0; border-bottom: 1px solid var(--edge); }
+  section:last-of-type { border-bottom: none; }
+  h2 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 22px;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  h2 .rule { flex: 1; height: 1px; background: var(--edge); }
+  .lede { color: var(--ink-dim); max-width: 68ch; margin: 0 0 24px; font-size: 14.5px; }
+  .lede strong { color: var(--ink); }
+
+  /* ---------- stage diagram ---------- */
+  .stage-figure {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 18px;
+    overflow-x: auto;
+  }
+  .stage-figure svg { display: block; width: 100%; height: auto; min-width: 480px; }
+  .stage-caption {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+  .stage-caption b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+  .swatch-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  /* ---------- palette ---------- */
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .chip {
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .chip .fill { height: 54px; }
+  .chip .label { padding: 8px 10px 10px; }
+  .chip .name { font-size: 12px; font-weight: 600; margin: 0 0 2px; }
+  .chip .hex { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); margin: 0; }
+
+  /* ---------- pose cards ---------- */
+  .pose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .pose-card {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .perf {
+    height: 10px;
+    background: repeating-linear-gradient(90deg, var(--edge) 0 3px, transparent 3px 11px);
+    border-bottom: 1px solid var(--edge);
+  }
+  .pose-head { padding: 14px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .pose-name { font-family: var(--display); font-weight: 800; font-size: 17px; margin: 0; }
+  .pose-priority {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em;
+    color: var(--ground); background: var(--gold);
+    padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+  }
+  :root[data-theme="light"] .pose-priority { color: #2a2000; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .pose-priority { color: #2a2000; }
+  }
+  .pose-stats {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px 14px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-dim);
+    border-bottom: 1px solid var(--edge);
+  }
+  .pose-stats b { color: var(--ink); font-weight: 600; }
+  .pose-desc { padding: 12px 16px 4px; font-size: 13.5px; color: var(--ink-dim); }
+  .pose-desc strong { color: var(--ink); }
+  ol.shots { list-style: none; margin: 8px 0 16px; padding: 0 16px; display: flex; flex-direction: column; gap: 6px; }
+  .shot { display: flex; gap: 10px; font-size: 13px; align-items: baseline; }
+  .shot .n {
+    font-family: var(--mono); color: var(--violet); font-weight: 700;
+    min-width: 16px; flex-shrink: 0;
+  }
+  .shot.key { background: var(--violet-dim); margin: 0 -16px; padding: 6px 16px; border-radius: 4px; }
+  .shot.key .n { color: var(--gold); }
+  .shot.key b { color: var(--ink); }
+
+  /* ---------- checklist / delivery ---------- */
+  .delivery-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .delivery-grid { grid-template-columns: 1fr; } }
+  pre {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin: 0;
+  }
+  pre .n { color: var(--gold); }
+  pre .c { color: var(--ink-dim); }
+  .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li {
+    display: flex; gap: 10px; font-size: 13.5px; color: var(--ink-dim);
+    border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px;
+    background: var(--panel);
+  }
+  .checklist li b { color: var(--ink); }
+  .checklist .box {
+    width: 14px; height: 14px; border: 1.5px solid var(--violet); border-radius: 3px;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  footer { padding: 28px 0 4px; color: var(--ink-dim); font-size: 12px; }
+  footer code { font-family: var(--mono); background: var(--panel); padding: 1px 6px; border-radius: 3px; }
+</style>
+
+<div class="page">
+  <div class="masthead">
+    <div class="masthead-inner">
+      <p class="eyebrow">Paperboy: The Run — Character Production Reference</p>
+      <h1>Ace, front to back</h1>
+      <p class="dek">Everything a new sprite sheet needs to match the game's camera, anchor, and lighting exactly — so it drops in and fits without a second pass. Pulled directly from the live renderer, not the other way around.</p>
+      <div class="facts">
+        <div class="fact"><p class="k">Stage</p><p class="v">960 × 540</p></div>
+        <div class="fact"><p class="k">Ace's anchor</p><p class="v">388, 462</p></div>
+        <div class="fact"><p class="k">Road centre</p><p class="v">x = 480</p></div>
+        <div class="fact"><p class="k">Display height</p><p class="v">~90px</p></div>
+        <div class="fact"><p class="k">Aspect target</p><p class="v">0.89 : 1</p></div>
+        <div class="fact"><p class="k">Camera</p><p class="v">rear view</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <section>
+      <h2>The camera<span class="rule"></span></h2>
+      <p class="lede">A fixed chase view down a vanishing-point road, homage to the 1985 Paperboy cabinet. The street recedes to one point on the horizon; houses fan out as they approach. <strong>Ace is pinned to one screen position while the world rushes toward camera</strong> — he never scales, never relocates. He is seen from behind: back, shoulders, the back of his backwards cap. Any art that shows his face by default is built for the wrong camera. The only exception is a brief three-quarter head-turn in <b style="font-family:var(--mono)">tuck</b> and the full front-facing beat in <b style="font-family:var(--mono)">crashed</b> — see the pose cards.</p>
+
+      <div class="stage-figure">
+        <svg viewBox="0 0 960 540" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="960" height="540" fill="none" stroke="var(--edge)" stroke-width="1"/>
+          <!-- horizon -->
+          <line x1="0" y1="175" x2="960" y2="175" stroke="var(--violet)" stroke-width="1" stroke-dasharray="4 5" opacity="0.6"/>
+          <text x="8" y="168" font-family="var(--mono)" font-size="12" fill="var(--ink-dim)">horizon · y = 175</text>
+          <!-- vanishing point + road fan -->
+          <circle cx="480" cy="175" r="4" fill="var(--gold)"/>
+          <line x1="480" y1="175" x2="270" y2="540" stroke="var(--violet)" stroke-width="1" opacity="0.45"/>
+          <line x1="480" y1="175" x2="690" y2="540" stroke="var(--violet)" stroke-width="1" opacity="0.45"/>
+          <line x1="480" y1="175" x2="218" y2="540" stroke="var(--violet)" stroke-width="1" opacity="0.25"/>
+          <line x1="480" y1="175" x2="742" y2="540" stroke="var(--violet)" stroke-width="1" opacity="0.25"/>
+          <line x1="480" y1="175" x2="480" y2="540" stroke="var(--ink-dim)" stroke-width="1" stroke-dasharray="2 6" opacity="0.5"/>
+          <text x="486" y="192" font-family="var(--mono)" font-size="11" fill="var(--gold)">vanishing point · 480, 175</text>
+          <!-- ground shadow -->
+          <ellipse cx="388" cy="464" rx="30" ry="7" fill="var(--violet)" opacity="0.45"/>
+          <!-- bounding box -->
+          <rect x="351" y="379" width="74" height="83" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <!-- anchor point -->
+          <circle cx="388" cy="462" r="5" fill="var(--gold)" stroke="var(--ground)" stroke-width="1.5"/>
+          <line x1="388" y1="462" x2="388" y2="500" stroke="var(--gold)" stroke-width="1"/>
+          <text x="396" y="503" font-family="var(--mono)" font-size="12" font-weight="600" fill="var(--gold)">RIDER_X, GROUND_Y · 388, 462</text>
+          <text x="430" y="405" font-family="var(--mono)" font-size="11" fill="var(--ink-dim)">~74×83 bounding box</text>
+          <text x="20" y="520" font-family="var(--mono)" font-size="11" fill="var(--ink-dim)">delivery lane fans right, toward the road centreline →</text>
+        </svg>
+      </div>
+      <div class="stage-caption">
+        <span><span class="swatch-dot" style="background:var(--gold)"></span>Ace's fixed anchor — every frame, every pose, draws from this one point</span>
+        <span><span class="swatch-dot" style="background:var(--violet)"></span>Road perspective (converges on the vanishing point)</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Who he is<span class="rule"></span></h2>
+      <p class="lede"><strong>Ace</strong>, ~11 years old, scrappy and delighted — never actually scared, even mid-disaster. Backwards red cap (from behind: crown visible, brim low at the neckline). Blue windbreaker, open enough to flap at speed. Canvas newspaper bag on <strong>his right hip</strong>, diagonal strap across the back — deliberate, since he rides the right-hand lane and throws right, so bag and throwing arm agree. Red BMX, flat bar, oversized canvas pedals. Head and hands run big for his body — he reads as small as 65px tall on a phone screen, so the silhouette has to survive that before anything else.</p>
+    </section>
+
+    <section>
+      <h2>Palette<span class="rule"></span></h2>
+      <p class="lede">Exact hex, pulled from the live renderer. The world outside him runs warm golden-hour light with violet shadows — never pure black — so give him a rim light from one consistent side, and keep his own contact shadow violet-tinted to match.</p>
+      <div class="palette-grid">
+        <div class="chip"><div class="fill" style="background:#3A6BC5"></div><div class="label"><p class="name">Jacket</p><p class="hex">#3A6BC5</p></div></div>
+        <div class="chip"><div class="fill" style="background:#2E55A0"></div><div class="label"><p class="name">Jacket shade</p><p class="hex">#2E55A0</p></div></div>
+        <div class="chip"><div class="fill" style="background:#D64545"></div><div class="label"><p class="name">Cap + frame</p><p class="hex">#D64545</p></div></div>
+        <div class="chip"><div class="fill" style="background:#B23A3A"></div><div class="label"><p class="name">Cap shade</p><p class="hex">#B23A3A</p></div></div>
+        <div class="chip"><div class="fill" style="background:#F0C49A"></div><div class="label"><p class="name">Skin</p><p class="hex">#F0C49A</p></div></div>
+        <div class="chip"><div class="fill" style="background:#E0AE85"></div><div class="label"><p class="name">Skin shade</p><p class="hex">#E0AE85</p></div></div>
+        <div class="chip"><div class="fill" style="background:#6E4A2C"></div><div class="label"><p class="name">Hair</p><p class="hex">#6E4A2C</p></div></div>
+        <div class="chip"><div class="fill" style="background:#D9C79E"></div><div class="label"><p class="name">Canvas bag</p><p class="hex">#D9C79E</p></div></div>
+        <div class="chip"><div class="fill" style="background:#B8A26E"></div><div class="label"><p class="name">Bag strap</p><p class="hex">#B8A26E</p></div></div>
+        <div class="chip"><div class="fill" style="background:#F4F1E8"></div><div class="label"><p class="name">Papers / sneakers</p><p class="hex">#F4F1E8</p></div></div>
+        <div class="chip"><div class="fill" style="background:#23273A"></div><div class="label"><p class="name">Tires / joints</p><p class="hex">#23273A</p></div></div>
+        <div class="chip"><div class="fill" style="background:#8B90A3"></div><div class="label"><p class="name">Spokes</p><p class="hex">#8B90A3</p></div></div>
+        <div class="chip"><div class="fill" style="background:#8177C9"></div><div class="label"><p class="name">Contact shadow*</p><p class="hex">violet, not grey</p></div></div>
+        <div class="chip"><div class="fill" style="background:#FFE9C4"></div><div class="label"><p class="name">Rim light</p><p class="hex">#FFE9C4 @ 85%</p></div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>The eight poses<span class="rule"></span></h2>
+      <p class="lede">If time runs short tonight, build in this order: <strong>ride → throw → crashed → tuck</strong> carry almost every moment a player actually sees; <strong>skid, tumble</strong> next; <strong>wheelie, idle</strong> last. Every sheet: same rule — one horizontal strip, transparent background, frames cropped tight then centred and bottom-anchored so the ground-contact point never drifts between frames. The line in gold-tinted highlight is the one "hero" frame worth nailing first in each sequence.</p>
+
+      <div class="pose-grid">
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">ride</h3><span class="pose-priority">BUILD FIRST</span></div>
+          <div class="pose-stats"><span><b>8</b> frames</span><span>loop</span><span>speed-synced</span></div>
+          <div class="pose-desc">Full pedal-crank rotation, 45° per frame. Draw one clean neutral-speed loop — the game retimes it to match run speed. Jacket hem and bag strap should sway a touch independently of the body so the loop doesn't read as mechanical.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Right pedal 12 o'clock, left at 6 — passing position</li>
+            <li class="shot"><span class="n">2</span>Right ~1:30, power stroke begins, slight torso dip</li>
+            <li class="shot"><span class="n">3</span>Right ~3 o'clock, power stroke at its deepest</li>
+            <li class="shot"><span class="n">4</span>Right ~4:30, left leg beginning to rise</li>
+            <li class="shot"><span class="n">5</span>Right 6 o'clock, left at 12 — mirror of frame 1</li>
+            <li class="shot"><span class="n">6</span>Right ~7:30</li>
+            <li class="shot"><span class="n">7</span>Right ~9 o'clock, torso rebounding upward</li>
+            <li class="shot"><span class="n">8</span>Right ~10:30, approaching frame 1 — must loop seamlessly</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">throw</h3><span class="pose-priority">BUILD FIRST</span></div>
+          <div class="pose-stats"><span><b>6</b> frames</span><span>450ms</span><span>≈13fps</span></div>
+          <div class="pose-desc">The single most-repeated animation in the game — every delivery, every ~1.2–1.5s. Right arm reaches to the hip bag and throws right. The paper itself flies as a separate sprite the game already animates, so the release frame just needs the arm mid-swing, not the paper leaving frame-perfectly.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Anticipation: arm begins reaching back, torso twists</li>
+            <li class="shot"><span class="n">2</span>Grab: hand at the bag opening</li>
+            <li class="shot"><span class="n">3</span>Wind-up: arm drawn back and up, torso coiled</li>
+            <li class="shot key"><span class="n">4</span><b>Release</b> — arm swung out right, paper leaving the hand</li>
+            <li class="shot"><span class="n">5</span>Follow-through: arm past the release point, slight overrotation</li>
+            <li class="shot"><span class="n">6</span>Return: arm relaxing to the handlebar, settling into ride</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">crashed / dazed</h3><span class="pose-priority">BUILD FIRST</span></div>
+          <div class="pose-stats"><span><b>1</b> frame</span><span>or 3-loop</span><span>faces camera</span></div>
+          <div class="pose-desc">The <strong>one pose that breaks the rear-view rule</strong> — the payoff of every loss. Ace sat up on the ground beside the toppled bike, spiral/dizzy stars, papers fluttering down, a calm half-smile that says "...again?" A static hold is enough; if you do the 3-frame loop, only the ring of stars needs to move (rotate through 0°/120°/240°) — everything else stays locked.</div>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">tuck</h3><span class="pose-priority">BUILD SECOND</span></div>
+          <div class="pose-stats"><span><b>5</b> frames</span><span>~930ms</span><span>plays at 0.3× speed</span></div>
+          <div class="pose-desc">The near-miss escape — the game's signature moment, played back in slow motion so it reads even slower on screen than the source timing suggests. The one place besides <b style="font-family:var(--mono)">crashed</b> where a slice of his face shows.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Alert: shoulders rise, head begins turning</li>
+            <li class="shot"><span class="n">2</span>Brace: deeper crouch, head turned further, one eye visible</li>
+            <li class="shot key"><span class="n">3</span><b>Peak tension</b> — full crouch, eye wide, the "yikes" beat</li>
+            <li class="shot"><span class="n">4</span>Relief: head turning back forward, shoulders relaxing</li>
+            <li class="shot"><span class="n">5</span>Recover: back to riding posture</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">skid</h3><span class="pose-priority">BUILD THIRD</span></div>
+          <div class="pose-stats"><span><b>6</b> frames</span><span>~900ms</span><span>≈10fps</span></div>
+          <div class="pose-desc">Cashing out / reaching the flag. A stop skid with rising dust, closing on a modest, pleased flourish — bigger wins already get their own confetti and fanfare elsewhere, so this frame doesn't need to carry the whole celebration.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Brake initiated: weight shifts forward</li>
+            <li class="shot"><span class="n">2</span>Skid begins: rear wheel sliding, first dust</li>
+            <li class="shot key"><span class="n">3</span><b>Skid peak</b> — maximum lean, biggest dust cloud</li>
+            <li class="shot"><span class="n">4</span>Settling: bike straightening, dust thinning</li>
+            <li class="shot"><span class="n">5</span>Stopped: fully settled, upright</li>
+            <li class="shot"><span class="n">6</span>Flourish: a small arm-up/fist-pump — keep it modest</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">tumble</h3><span class="pose-priority">BUILD THIRD</span></div>
+          <div class="pose-stats"><span><b>8</b> frames</span><span>~780ms</span><span>≈10fps</span></div>
+          <div class="pose-desc">The wipeout. Comedic, never painful — a cartoon spill, not a crash-test. Ends directly into <b style="font-family:var(--mono)">crashed</b>'s starting position.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Impact: front wheel catches, bike jerks</li>
+            <li class="shot"><span class="n">2</span>Launch: rider separating from the bike, both airborne</li>
+            <li class="shot key"><span class="n">3</span><b>Peak chaos</b> — rider and bike scattered mid-air, papers flying</li>
+            <li class="shot"><span class="n">4</span>Falling: descending, still tumbling</li>
+            <li class="shot"><span class="n">5</span>First impact: hits ground, begins to bounce/roll</li>
+            <li class="shot"><span class="n">6</span>Roll: tumbling across the ground</li>
+            <li class="shot"><span class="n">7</span>Sliding to a stop: momentum bleeding off</li>
+            <li class="shot"><span class="n">8</span>At rest — hands off into crashed</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">wheelie</h3><span class="pose-priority">BUILD LAST</span></div>
+          <div class="pose-stats"><span><b>7</b> frames</span><span>700ms</span><span>≈10fps</span></div>
+          <div class="pose-desc">Milestone deliveries (×5/×10/×25/×50) and skateboard hops. A showoff beat, not a full stunt.</div>
+          <ol class="shots">
+            <li class="shot"><span class="n">1</span>Compression: weight shifts back, anticipation crouch</li>
+            <li class="shot"><span class="n">2</span>Lift-off: front wheel just leaving the ground</li>
+            <li class="shot"><span class="n">3</span>Rising: front wheel ~30° up</li>
+            <li class="shot key"><span class="n">4</span><b>Peak</b> — front wheel at its highest, body leaned back</li>
+            <li class="shot"><span class="n">5</span>Hold: sustained peak, small settle</li>
+            <li class="shot"><span class="n">6</span>Descending: front wheel coming back down</li>
+            <li class="shot"><span class="n">7</span>Landing: touches down, slight bounce, back to ride</li>
+          </ol>
+        </div>
+
+        <div class="pose-card">
+          <div class="perf"></div>
+          <div class="pose-head"><h3 class="pose-name">idle</h3><span class="pose-priority">BUILD LAST</span></div>
+          <div class="pose-stats"><span><b>1</b> frame</span><span>hold</span><span>attract screen</span></div>
+          <div class="pose-desc">Relaxed stand-by between bets. A personality beat, not urgent — a static hold is genuinely enough here.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <section>
+      <h2>Delivery<span class="rule"></span></h2>
+      <div class="delivery-grid">
+        <pre>ace_idle.png     <span class="c">1 frame</span>
+ace_ride.png     <span class="n">8</span> frames, loop
+ace_throw.png    <span class="n">6</span> frames
+ace_wheelie.png  <span class="n">7</span> frames
+ace_tuck.png     <span class="n">5</span> frames
+ace_skid.png     <span class="n">6</span> frames
+ace_tumble.png   <span class="n">8</span> frames
+ace_crashed.png  <span class="c">1 frame (or 3, looped)</span>
+
+<span class="c"># self-check before sending a file over:</span>
+python3 tools/check_sprite.py \
+  public/sprites/ace_ride.png --pose ride</pre>
+        <ul class="checklist">
+          <li><span class="box"></span><span><b>Transparent background</b> — a real alpha channel, corners actually transparent, not a flattened colour.</span></li>
+          <li><span class="box"></span><span><b>One uniform frame grid per file</b> — every frame in a sheet is the same width × height; it's sliced by <code style="font-family:var(--mono)">width ÷ frame count</code>.</span></li>
+          <li><span class="box"></span><span><b>Ground contact stays put</b> — same relative position in every frame, or Ace visibly jumps when poses switch.</span></li>
+          <li><span class="box"></span><span><b>Aspect near 0.89:1</b> per frame — any resolution above ~74×83 is fine, just keep proportions consistent across all 8 files.</span></li>
+          <li><span class="box"></span><span><b>Rim light, one consistent side</b> — matches the world's low-sun lighting so he doesn't look pasted onto the background.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>
+      Full source: <code>docs/paperboy/04-character-art-brief.md</code> · Validator: <code>paperboy/tools/check_sprite.py</code> · Wiring: <code>paperboy/src/game/scene.ts</code> (<code>SPRITE_DEFS</code>)
+    </footer>
+  </div>
+</div>
