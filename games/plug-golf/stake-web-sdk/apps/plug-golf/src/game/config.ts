@@ -10,17 +10,22 @@
  */
 import type { Vec } from './geometry.ts';
 
-/** Reference play-field, in the same 420x760 space the prototype uses. */
+/**
+ * Reference play-field (420x760). The hole is an ISLAND GREEN: the putting
+ * surface sits on a landmass ringed by a sandy shore, surrounded by water, with
+ * two bunkers on the green's edge. Anything off the island is water, so a 0x
+ * "lose" reads naturally as a splash.
+ */
 export const FIELD = { w: 420, h: 760 } as const;
-export const GREEN: Vec = { x: 210, y: 185 }; // the pin
-export const TEE: Vec = { x: 210, y: 652 };
-export const RADII = { hole: 7, inner: 26, outer: 50, fringe: 72, green: 88, aimMax: 54 } as const;
+export const GREEN: Vec = { x: 210, y: 214 }; // the pin (island centre)
+export const TEE: Vec = { x: 210, y: 690 };
+// green: putting surface · collar: fringe ring · island: land edge (then water)
+export const RADII = { hole: 7, inner: 26, outer: 50, green: 82, collar: 96, island: 114, aimMax: 50 } as const;
 export const BUNKERS = [
-  { x: 112, y: 142, rx: 30, ry: 18 },
-  { x: 305, y: 266, rx: 33, ry: 20 },
+  { x: 150, y: 158, rx: 26, ry: 16 },
+  { x: 272, y: 262, rx: 28, ry: 17 },
 ] as const;
-export const SPLASH: Vec = { x: 352, y: 198 }; // water landing spot
-export const TREEHIT: Vec = { x: 74, y: 340 }; // tree deflection spot
+export const LAKE = { x: 18, y: 44, w: 384, h: 556, r: 64 } as const; // the water body
 
 export type ClubKey = 'wedge' | 'shortIron' | 'longIron' | 'threeWood' | 'driver' | 'masters';
 

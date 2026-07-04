@@ -220,17 +220,18 @@ function fit(){
 }
 addEventListener('resize', fit); fit();
 
-/* ---------- course geometry ---------- */
-const GC  = {x:210, y:185};                       // green centre (the pin)
-const TEE = {x:210, y:652};
-const R   = {hole:7, inner:26, outer:50, fringe:72, green:88, aimMax:54};
-const BUNKERS = [{x:112,y:142,rx:30,ry:18},{x:305,y:266,rx:33,ry:20}];
-const SPLASH  = {x:352, y:198};                   // water landing spot
-const TREEHIT = {x:74,  y:340};                   // tree deflection spot
-const TREES = [
-  {x:52,y:120,r:26},{x:84,y:88,r:20},{x:40,y:210,r:22},{x:66,y:300,r:26},
-  {x:44,y:392,r:20},{x:150,y:70,r:18},{x:250,y:56,r:16},{x:378,y:470,r:20},
-  {x:52,y:492,r:24},{x:376,y:560,r:18}
+/* ---------- course geometry: an ISLAND GREEN ----------
+   The green is a landmass in the middle of a lake, ringed by a sandy shore,
+   with two bunkers on the green's edge. Anything off the island is water, so a
+   0x "lose" reads naturally as a splash — the whole point of this layout. */
+const GC  = {x:210, y:214};                       // green centre (the pin)
+const TEE = {x:210, y:690};
+const R   = {hole:7, inner:26, outer:50, green:82, collar:96, island:114, aimMax:50};
+const BUNKERS = [{x:150,y:158,rx:26,ry:16},{x:272,y:262,rx:28,ry:17}]; // on the green edge
+const LAKE = {x:18, y:44, w:384, h:556, r:64};    // the water body (rounded rect)
+const TREES = [                                    // decorative, on the mainland margin
+  {x:26,y:78,r:15},{x:58,y:120,r:12},{x:394,y:84,r:14},{x:400,y:150,r:11},
+  {x:22,y:250,r:11},{x:406,y:300,r:12},{x:30,y:560,r:13},{x:398,y:540,r:12}
 ];
 const WEATHER = [
   {name:'Sunny',  tint:null,                    rain:false},
@@ -493,8 +494,8 @@ function restPoint(tier){
     case 'tapIn':     return polar(GC, 9+Math.random()*4,   a);
     case 'lipOut':    return polar(GC, 8.5+Math.random()*2, a);
     case 'holeIn':    return {x:GC.x, y:GC.y};
-    case 'fringe':    return polar(GC, R.fringe-5+Math.random()*11, a);
-    case 'rough':     return polar(GC, R.green+22+Math.random()*34, a);
+    case 'fringe':    return polar(GC, R.green-4+Math.random()*(R.collar-R.green), a);   // on the collar
+    case 'rough':     return polar(GC, R.collar+Math.random()*(R.island-R.collar-6), a); // island rough, short of water
     case 'bunker': {
       const b = BUNKERS[dist(S.aim,BUNKERS[0])<dist(S.aim,BUNKERS[1])?0:1];
       return {x:b.x+(Math.random()*2-1)*b.rx*.5, y:b.y+(Math.random()*2-1)*b.ry*.5};
@@ -590,11 +591,12 @@ function firework(x,y){
     S.particles.push({type:'dot',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,size:2.4,color:col,age:0,life:.9+Math.random()*.5,g:60});
   }
 }
-function splashFx(){
+function splashFx(pt){
+  const p=pt||S.rest||{x:GC.x,y:GC.y};
   sSplash();
-  for(let i=0;i<3;i++) S.particles.push({type:'ring',world:true,x:SPLASH.x,y:SPLASH.y,age:-i*.14,life:.85,size:6,color:'rgba(220,240,255,.8)'});
+  for(let i=0;i<3;i++) S.particles.push({type:'ring',world:true,x:p.x,y:p.y,age:-i*.14,life:.85,size:6,color:'rgba(220,240,255,.8)'});
   for(let i=0;i<14;i++){ const a=Math.random()*Math.PI*2, v=25+Math.random()*70;
-    S.particles.push({type:'dot',world:true,x:SPLASH.x,y:SPLASH.y,vx:Math.cos(a)*v,vy:-40-Math.random()*70,size:2.2,color:'#bfe6ff',age:0,life:.7,g:220});
+    S.particles.push({type:'dot',world:true,x:p.x,y:p.y,vx:Math.cos(a)*v,vy:-40-Math.random()*70,size:2.2,color:'#bfe6ff',age:0,life:.7,g:220});
   }
 }
 
@@ -607,34 +609,31 @@ function buildShot(){
   const windCurve = Math.cos(S.wind.dir)* S.wind.spd*2.2;   // gentle cosmetic bend
 
   if(o.tier==='lose'){
-    const v=['water','tree','slice'][Math.floor(Math.random()*3)];
-    if(v==='water'){
-      segs.push(flightSeg(from,{x:lerp(from.x,SPLASH.x,.5),y:lerp(from.y,SPLASH.y,.55)},F.h,F.dur*.62,windCurve,
-        {onEnd:()=>caption('GUST! 💨','small')}));
-      segs.push(flightSeg({x:S.ball.x,y:S.ball.y},SPLASH,F.h*.45,F.dur*.5,60));
-      segs.push(seg(.05,()=>{},{onEnd:()=>{splashFx(); S.ball.on=false; landCam(); caption('SPLASH!','pop');}}));
-      segs.push(pauseSeg(.9,{onStart:sCrowdO}));
-      S.rest = SPLASH;
-    }else if(v==='tree'){
-      segs.push(flightSeg(from,TREEHIT,F.h*.8,F.dur*.7,-70,{onEnd:()=>{caption('CLACK! 🌳','pop'); sHit();}}));
-      const drop={x:TREEHIT.x+18+Math.random()*20,y:TREEHIT.y+34};
-      segs.push(bounceSeg(TREEHIT,drop,26,.4));
-      segs.push(rollSeg(drop,{x:drop.x+10,y:drop.y+14},.5));
-      segs.push(pauseSeg(.7,{onStart:()=>caption('Out of position…','small')}));
-      S.rest={x:drop.x+10,y:drop.y+14};
-    }else{
-      const out={x:365,y:430};
-      segs.push(flightSeg(from,out,F.h*.9,F.dur,110,{onEnd:()=>caption('Sliced it…','small')}));
-      segs.push(bounceSeg(out,{x:out.x+12,y:out.y+16},18,.35));
-      segs.push(rollSeg({x:out.x+12,y:out.y+16},{x:out.x+22,y:out.y+26},.5));
-      segs.push(pauseSeg(.6));
-      S.rest={x:out.x+22,y:out.y+26};
+    // island green: every miss is water. Three ways to find it.
+    const aimA = angTo(GC, S.aim.x===GC.x&&S.aim.y===GC.y ? {x:GC.x,y:GC.y+1} : S.aim);
+    const v=['short','long','side'][Math.floor(Math.random()*3)];
+    let splash, cap;
+    if(v==='short'){                                 // came up short, into the water in front
+      splash={x:GC.x+(Math.random()*2-1)*40, y:GC.y+R.island+30+Math.random()*70};
+      cap='Came up short!';
+    }else if(v==='long'){                             // airmailed the green
+      splash={x:GC.x+(Math.random()*2-1)*46, y:GC.y-R.island-16-Math.random()*46};
+      cap='GUST! 💨';
+    }else{                                            // kicked off the bank, beside the island
+      splash=polar(GC, R.island+10+Math.random()*26, aimA + (Math.random()<.5?1:-1)*(0.5+Math.random()*0.5));
+      cap='Off the bank…';
     }
+    const land={x:lerp(from.x,splash.x,.62),y:lerp(from.y,splash.y,.6)};
+    segs.push(flightSeg(from,land,F.h,F.dur*.6,windCurve,{onEnd:()=>caption(cap,'small')}));
+    segs.push(flightSeg(land,splash,F.h*.4,F.dur*.5,windCurve*.5));
+    segs.push(seg(.05,()=>{},{onEnd:()=>{S.rest=splash; splashFx(splash); S.ball.on=false; landCam(); caption('SPLASH!','pop');}}));
+    segs.push(pauseSeg(1.1,{onStart:sCrowdO}));
+    S.rest = splash;
     play(segs,toResult); return;
   }
 
   if(o.tier==='bunker'){
-    const land=polar(GC,R.fringe-4,angTo(GC,rest));
+    const land=polar(GC,R.collar-4,angTo(GC,rest));
     segs.push(flightSeg(from,land,F.h,F.dur,windCurve,{onEnd:()=>caption('Big bounce!','small')}));
     segs.push(bounceSeg(land,rest,46,.55,{onEnd:()=>{sCrowdO(); caption('Ooooh! Bunker.','pop');}}));
     segs.push(pauseSeg(.8));
@@ -803,45 +802,44 @@ function setAim(p){
 }
 
 /* ---------- rendering ---------- */
+function roundRectPath(x,y,w,h,r){
+  cx.beginPath();
+  cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r);
+  cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath();
+}
 function drawCourse(){
   const th=WEATHER[S.weather];
-  // rough base
-  const g=cx.createRadialGradient(W/2,H/2,80,W/2,H/2,H*.72);
-  g.addColorStop(0,'#2c6b33'); g.addColorStop(1,'#1c4a24');
+  // mainland grass base
+  const g=cx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#2c6b33'); g.addColorStop(1,'#245a2b');
   cx.fillStyle=g; cx.fillRect(0,0,W,H);
-  // water
-  cx.fillStyle='#1f6fb8';
-  cx.beginPath();
-  cx.moveTo(W,40); cx.bezierCurveTo(330,90,300,190,336,260);
-  cx.bezierCurveTo(360,308,420,330,W,320); cx.closePath(); cx.fill();
-  cx.fillStyle='rgba(255,255,255,.10)';
-  cx.beginPath(); cx.ellipse(372,150,26,58,-.4,0,7); cx.fill();
-  // fairway capsule
-  cx.strokeStyle='#3f8f47'; cx.lineWidth=150; cx.lineCap='round';
-  cx.beginPath(); cx.moveTo(TEE.x,TEE.y-6); cx.quadraticCurveTo(186,430,GC.x,GC.y+30); cx.stroke();
-  // mow stripes
-  cx.save();
-  cx.beginPath(); cx.moveTo(TEE.x,TEE.y-6); cx.quadraticCurveTo(186,430,GC.x,GC.y+30);
-  cx.lineWidth=150; cx.strokeStyle='rgba(0,0,0,0)'; cx.stroke();
-  cx.clip(); // clip only affects following fills via path? use rect bands over stroked area
-  cx.restore();
-  cx.save();
-  cx.globalAlpha=.05; cx.fillStyle='#fff';
-  for(let y=140;y<H;y+=64) cx.fillRect(60,y,300,32);
+  cx.save(); cx.globalAlpha=.04; cx.fillStyle='#fff';
+  for(let y=0;y<H;y+=54) cx.fillRect(0,y,W,26);
   cx.globalAlpha=1; cx.restore();
-  // green + fringe
-  cx.fillStyle='#5fae52'; cx.beginPath(); cx.arc(GC.x,GC.y,R.green,0,7); cx.fill();
-  cx.fillStyle='#6ec25e'; cx.beginPath(); cx.arc(GC.x,GC.y,R.fringe,0,7); cx.fill();
-  // bunkers
-  for(const b of BUNKERS){
-    cx.fillStyle='#e8d9a8'; cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.fill();
-    cx.fillStyle='rgba(160,130,70,.35)'; cx.beginPath(); cx.ellipse(b.x,b.y+3,b.rx*.7,b.ry*.55,0,0,7); cx.fill();
-  }
-  // trees
+  // the lake
+  roundRectPath(LAKE.x-6,LAKE.y-4,LAKE.w+12,LAKE.h+8,LAKE.r+6); cx.fillStyle='#17568f'; cx.fill();
+  roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r);            cx.fillStyle='#1f6fb8'; cx.fill();
+  cx.save(); cx.globalAlpha=.10; cx.fillStyle='#fff';
+  for(let i=0;i<6;i++){ cx.beginPath(); cx.ellipse(64+i*58, 96+((i%2)*44), 30,9,0,0,7); cx.fill(); }
+  cx.globalAlpha=1; cx.restore();
+  // decorative trees on the mainland margin (drawn before the island so they sit behind nothing important)
   for(const t of TREES){
     cx.fillStyle='#173c1d'; cx.beginPath(); cx.arc(t.x+2,t.y+3,t.r,0,7); cx.fill();
     cx.fillStyle='#215a29'; cx.beginPath(); cx.arc(t.x,t.y,t.r,0,7); cx.fill();
     cx.fillStyle='rgba(255,255,255,.07)'; cx.beginPath(); cx.arc(t.x-t.r*.3,t.y-t.r*.3,t.r*.5,0,7); cx.fill();
+  }
+  // island: sandy shore, then grass, then collar, then putting surface
+  cx.fillStyle='#d9c188'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island,0,7); cx.fill();     // sand rim
+  cx.fillStyle='#3a8342'; cx.beginPath(); cx.arc(GC.x,GC.y,R.island-7,0,7); cx.fill();   // island rough
+  cx.fillStyle='#54a049'; cx.beginPath(); cx.arc(GC.x,GC.y,R.collar,0,7); cx.fill();     // collar / fringe
+  cx.fillStyle='#74c85f'; cx.beginPath(); cx.arc(GC.x,GC.y,R.green,0,7); cx.fill();      // putting surface
+  cx.save(); cx.globalAlpha=.06; cx.strokeStyle='#fff'; cx.lineWidth=6;
+  for(let r=13;r<R.green;r+=13){ cx.beginPath(); cx.arc(GC.x,GC.y,r,0,7); cx.stroke(); }
+  cx.globalAlpha=1; cx.restore();
+  // bunkers on the green edge
+  for(const b of BUNKERS){
+    cx.fillStyle='#ece0b4'; cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.fill();
+    cx.fillStyle='rgba(150,120,60,.35)'; cx.beginPath(); cx.ellipse(b.x,b.y+3,b.rx*.7,b.ry*.55,0,0,7); cx.fill();
   }
   // scoring rings (bright while aiming)
   const hot = S.phase==='aim'||S.phase==='power';
@@ -858,8 +856,10 @@ function drawCourse(){
   const flap=6+S.wind.spd*1.6;
   cx.fillStyle='#ff4040'; cx.beginPath();
   cx.moveTo(GC.x,GC.y-34); cx.lineTo(GC.x+flap+8,GC.y-29); cx.lineTo(GC.x,GC.y-24); cx.closePath(); cx.fill();
-  // tee box
-  cx.fillStyle='rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y+4,40,16,0,0,7); cx.fill();
+  // tee box on the mainland at the bottom
+  cx.fillStyle='#3f8f47'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y,52,24,0,0,7); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.05)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y-3,40,15,0,0,7); cx.fill();
+  cx.fillStyle='rgba(0,0,0,.16)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y+7,38,13,0,0,7); cx.fill();
 }
 function drawAimUI(){
   if(S.phase!=='aim' && S.phase!=='power') return;

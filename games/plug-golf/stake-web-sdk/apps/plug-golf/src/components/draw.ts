@@ -9,6 +9,7 @@ import type { Vec } from '../game/geometry.ts';
 export interface GraphicsLike {
   clear(): GraphicsLike;
   rect(x: number, y: number, w: number, h: number): GraphicsLike;
+  roundRect(x: number, y: number, w: number, h: number, r: number): GraphicsLike;
   circle(x: number, y: number, r: number): GraphicsLike;
   ellipse(x: number, y: number, rx: number, ry: number): GraphicsLike;
   fill(style: number | { color: number; alpha?: number }): GraphicsLike;
@@ -20,29 +21,35 @@ export interface GraphicsLike {
 type CourseRefs = {
   GREEN: Vec;
   TEE: Vec;
-  RADII: { hole: number; inner: number; outer: number; fringe: number; green: number; aimMax: number };
+  RADII: { hole: number; inner: number; outer: number; green: number; collar: number; island: number; aimMax: number };
   BUNKERS: readonly { x: number; y: number; rx: number; ry: number }[];
+  LAKE: { x: number; y: number; w: number; h: number; r: number };
   FIELD: { w: number; h: number };
 };
 
+/** Island green: mainland → lake → sandy shore → island rough → collar → green. */
 export function drawCourse(g: GraphicsLike, r: CourseRefs): void {
-  const { GREEN: GC, TEE, RADII: R, BUNKERS, FIELD } = r;
+  const { GREEN: GC, TEE, RADII: R, BUNKERS, LAKE, FIELD } = r;
   g.clear();
-  // rough base
-  g.rect(0, 0, FIELD.w, FIELD.h).fill(0x1c4a24);
-  // water (right side)
-  g.rect(300, 40, FIELD.w - 300, 300).fill({ color: 0x1f6fb8, alpha: 0.95 });
-  // green + fringe
-  g.circle(GC.x, GC.y, R.fringe).fill(0x6ec25e);
-  g.circle(GC.x, GC.y, R.green).fill({ color: 0x5fae52, alpha: 0.9 });
-  // bunkers
-  for (const b of BUNKERS) g.ellipse(b.x, b.y, b.rx, b.ry).fill(0xe8d9a8);
+  // mainland grass
+  g.rect(0, 0, FIELD.w, FIELD.h).fill(0x245a2b);
+  // lake
+  g.roundRect(LAKE.x - 6, LAKE.y - 4, LAKE.w + 12, LAKE.h + 8, LAKE.r + 6).fill(0x17568f);
+  g.roundRect(LAKE.x, LAKE.y, LAKE.w, LAKE.h, LAKE.r).fill(0x1f6fb8);
+  // island: sand rim, rough, collar, putting surface
+  g.circle(GC.x, GC.y, R.island).fill(0xd9c188);
+  g.circle(GC.x, GC.y, R.island - 7).fill(0x3a8342);
+  g.circle(GC.x, GC.y, R.collar).fill(0x54a049);
+  g.circle(GC.x, GC.y, R.green).fill(0x74c85f);
+  // bunkers on the green edge
+  for (const b of BUNKERS) g.ellipse(b.x, b.y, b.rx, b.ry).fill(0xece0b4);
   // scoring rings
   g.circle(GC.x, GC.y, R.outer).fill({ color: 0xff8c28, alpha: 0.28 });
   g.circle(GC.x, GC.y, R.inner).fill({ color: 0xffdc3c, alpha: 0.32 });
   // hole + flag
   g.circle(GC.x, GC.y, R.hole).fill(0x0c2410);
   g.moveTo(GC.x, GC.y).lineTo(GC.x, GC.y - 34).stroke({ color: 0xffffff, width: 2 });
-  // tee shadow
-  g.ellipse(TEE.x, TEE.y + 4, 40, 16).fill({ color: 0x000000, alpha: 0.18 });
+  // tee box on the mainland
+  g.ellipse(TEE.x, TEE.y, 52, 24).fill(0x3f8f47);
+  g.ellipse(TEE.x, TEE.y + 7, 38, 13).fill({ color: 0x000000, alpha: 0.16 });
 }

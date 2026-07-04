@@ -20,7 +20,7 @@
     type Cue,
   } from '../game/shotEngine.ts';
   import type { EmitterEvent, EventEmitter } from '../game/emitterEvents.ts';
-  import { GREEN, TEE, RADII, BUNKERS, FIELD } from '../game/config.ts';
+  import { GREEN, TEE, RADII, BUNKERS, LAKE, FIELD } from '../game/config.ts';
   import { drawCourse } from './draw.ts';
 
   // SDK-provided contexts (state-shared). Typed loosely here; the monorepo
@@ -101,7 +101,7 @@
   scale={camZ}
   pivot={{ x: camX, y: camY }}
 >
-  <Graphics draw={(g) => drawCourse(g, { GREEN, TEE, RADII, BUNKERS, FIELD })} />
+  <Graphics draw={(g) => drawCourse(g, { GREEN, TEE, RADII, BUNKERS, LAKE, FIELD })} />
 
   {#if ball.on}
     <!-- shadow -->

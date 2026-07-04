@@ -13,7 +13,7 @@
  * the timeline; the tests assert its shape. Randomness flows through a seeded
  * Rng so a given book id always renders identically (reproducible replays).
  */
-import { GREEN as GC, TEE, RADII as R, BUNKERS, SPLASH, TREEHIT, FLIGHT } from './config.ts';
+import { GREEN as GC, TEE, RADII as R, BUNKERS, FLIGHT } from './config.ts';
 import type { ClubKey, Tier } from './config.ts';
 import { type Vec, lerp, dist, angTo, polar } from './geometry.ts';
 import { type Rng, range, spread, pick } from './rng.ts';
@@ -81,8 +81,8 @@ function restPoint(tier: Tier, ctx: ShotContext): Vec {
     case 'tapIn': return polar(GC, range(rng, 9, 13), a);
     case 'lipOut': return polar(GC, range(rng, 8.5, 10.5), a);
     case 'holeIn': return { x: GC.x, y: GC.y };
-    case 'fringe': return polar(GC, range(rng, R.fringe - 5, R.fringe + 6), a);
-    case 'rough': return polar(GC, range(rng, R.green + 22, R.green + 56), a);
+    case 'fringe': return polar(GC, range(rng, R.green - 4, R.collar), a); // on the collar
+    case 'rough': return polar(GC, range(rng, R.collar, R.island - 6), a); // island rough, short of water
     case 'bunker': {
       const b = dist(aim, BUNKERS[0]) < dist(aim, BUNKERS[1]) ? BUNKERS[0] : BUNKERS[1];
       return { x: b.x + spread(rng, b.rx * 0.5), y: b.y + spread(rng, b.ry * 0.5) };
@@ -123,45 +123,38 @@ export function buildShotTimeline(outcome: { tier: Tier; mult: number }, ctx: Sh
   const distanceM = reportDist(tier, rng);
 
   if (tier === 'lose') {
-    const variant = pick(rng, ['water', 'tree', 'slice'] as const);
-    if (variant === 'water') {
-      const mid = { x: lerp(from.x, SPLASH.x, 0.5), y: lerp(from.y, SPLASH.y, 0.55) };
-      segments.push(flight(from, mid, F.h, F.dur * 0.62, windCurve, [cue({ at: 'end', kind: 'caption', text: 'GUST! 💨', style: 'small' })]));
-      segments.push(flight(mid, SPLASH, F.h * 0.45, F.dur * 0.5, 60, [
-        cue({ at: 'end', kind: 'fx', id: 'splash' }),
-        cue({ at: 'end', kind: 'sfx', id: 'splash' }),
-        cue({ at: 'end', kind: 'camera', mode: 'land' }),
-        cue({ at: 'end', kind: 'caption', text: 'SPLASH!', style: 'pop' }),
-      ]));
-      segments.push(pause(SPLASH, 0.9, [cue({ at: 'start', kind: 'sfx', id: 'crowdOoh' })]));
-      rest = { ...SPLASH };
-      ballOutAtEnd = true;
-    } else if (variant === 'tree') {
-      segments.push(flight(from, TREEHIT, F.h * 0.8, F.dur * 0.7, -70, [
-        cue({ at: 'end', kind: 'caption', text: 'CLACK! 🌳', style: 'pop' }),
-        cue({ at: 'end', kind: 'sfx', id: 'hit' }),
-      ]));
-      const drop = { x: TREEHIT.x + range(rng, 18, 38), y: TREEHIT.y + 34 };
-      segments.push(bounce(TREEHIT, drop, 26, 0.4));
-      const settle = { x: drop.x + 10, y: drop.y + 14 };
-      segments.push(roll(drop, settle, 0.5));
-      segments.push(pause(settle, 0.7, [cue({ at: 'start', kind: 'caption', text: 'Out of position…', style: 'small' })]));
-      rest = settle;
+    // island green: every miss is water. Three ways to find it.
+    const aimA = angTo(GC, ctx.aim.x === GC.x && ctx.aim.y === GC.y ? { x: GC.x, y: GC.y + 1 } : ctx.aim);
+    const variant = pick(rng, ['short', 'long', 'side'] as const);
+    let splash: Vec;
+    let cap: string;
+    if (variant === 'short') {
+      splash = { x: GC.x + spread(rng, 40), y: GC.y + R.island + range(rng, 30, 100) };
+      cap = 'Came up short!';
+    } else if (variant === 'long') {
+      splash = { x: GC.x + spread(rng, 46), y: GC.y - R.island - range(rng, 16, 62) };
+      cap = 'GUST! 💨';
     } else {
-      const out = { x: 365, y: 430 };
-      segments.push(flight(from, out, F.h * 0.9, F.dur, 110, [cue({ at: 'end', kind: 'caption', text: 'Sliced it…', style: 'small' })]));
-      const b1 = { x: out.x + 12, y: out.y + 16 };
-      segments.push(bounce(out, b1, 18, 0.35));
-      const settle = { x: out.x + 22, y: out.y + 26 };
-      segments.push(roll(b1, settle, 0.5));
-      segments.push(pause(settle, 0.6));
-      rest = settle;
+      const side = rng() < 0.5 ? 1 : -1;
+      splash = polar(GC, R.island + range(rng, 10, 36), aimA + side * range(rng, 0.5, 1.0));
+      cap = 'Off the bank…';
     }
+    const land = { x: lerp(from.x, splash.x, 0.62), y: lerp(from.y, splash.y, 0.6) };
+    segments.push(flight(from, land, F.h, F.dur * 0.6, windCurve, [cue({ at: 'end', kind: 'caption', text: cap, style: 'small' })]));
+    segments.push(flight(land, splash, F.h * 0.4, F.dur * 0.5, windCurve * 0.5, [
+      cue({ at: 'end', kind: 'fx', id: 'splash' }),
+      cue({ at: 'end', kind: 'sfx', id: 'splash' }),
+      cue({ at: 'end', kind: 'camera', mode: 'land' }),
+      cue({ at: 'end', kind: 'caption', text: 'SPLASH!', style: 'pop' }),
+    ]));
+    segments.push(pause(splash, 1.1, [cue({ at: 'start', kind: 'sfx', id: 'crowdOoh' })]));
+    rest = splash;
+    ballOutAtEnd = true;
     return { tier, mult, segments, rest, distanceM, ballOutAtEnd };
   }
 
   if (tier === 'bunker') {
-    const land = polar(GC, R.fringe - 4, angTo(GC, rest));
+    const land = polar(GC, R.collar - 4, angTo(GC, rest));
     segments.push(flight(from, land, F.h, F.dur, windCurve, [cue({ at: 'end', kind: 'caption', text: 'Big bounce!', style: 'small' })]));
     segments.push(bounce(land, rest, 46, 0.55, [
       cue({ at: 'end', kind: 'sfx', id: 'crowdOoh' }),

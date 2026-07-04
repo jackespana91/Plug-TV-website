@@ -125,10 +125,15 @@ in the prototype:
 | 25x | Wind dies… slow motion… lands soft, creeps to the lip, 1.1 turns… drops. |
 | 50x/100x | Extra slow-mo, heartbeat pulse, 1.6 lip turns, drop, gold caption "HOOOOLE IN ONE!!!", fanfare, confetti storm + fireworks. Built to be clipped and shared. |
 
+The hole is an **island green** — the putting surface sits on a landmass ringed by a
+sandy shore and surrounded by water, with two bunkers on the green's edge. This makes
+the 0x outcome read naturally: any miss is a splash, so a losing round never feels
+arbitrary — the player can see there was nowhere safe to land but the green itself.
+
 Supporting systems in the prototype: per-round weather (Sunny / Sunset / Night with
 glow ball / Rain with particles — pure tint, zero RTP effect), cosmetic wind HUD with
 waving flag, synthesized SFX (strike, bounce, splash, crowd, cup-drop, fanfare) with
-mute toggle, and a stripes-and-shadows broadcast-style course render.
+mute toggle, and a broadcast-style island-green course render.
 
 ### 5.1 Broadcast camera & replay (implemented)
 
