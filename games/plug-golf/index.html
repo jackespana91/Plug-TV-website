@@ -1095,19 +1095,31 @@ function drawFigure(x,y,s,o){
   if(o.prop){ cx.font=`${18*s}px serif`; cx.fillText(o.prop, hR.x, hR.y+(o.propDy||0)); }
   cx.restore();
 }
-/* golfer at the tee: at address during aim/power, mid-swing at launch */
+/* ---------- the swing: address → wind-up (pull-back) → downswing → follow-through ---------- */
+const SWING = {
+  address: {armL:1.9,  armR:1.2,  lean:0.04,  clubAng:-0.5, dx:0},
+  top:     {armL:-2.5, armR:-2.1, lean:-0.15, clubAng:-2.6, dx:-3},
+  impact:  {armL:1.7,  armR:1.05, lean:0.07,  clubAng:-0.3, dx:1},
+  follow:  {armL:-0.7, armR:-1.15,lean:0.17,  clubAng:2.4,  dx:4}
+};
+function lerpPose(a,b,k){
+  const o={}; for(const key in a) o[key]=a[key]+(b[key]-a[key])*k; return o;
+}
+function swingPose(){
+  // during power: wind up from address to the top of the backswing as you pull
+  if(S.phase==='power') return lerpPose(SWING.address, SWING.top, S.pull);
+  if(S.swingT==null)    return SWING.address;
+  const t=S.swingT;
+  if(t<0.13) return lerpPose(SWING.top, SWING.impact, t/0.13);        // downswing (fast)
+  if(t<0.40) return lerpPose(SWING.impact, SWING.follow, (t-0.13)/0.27); // through impact → follow
+  return SWING.follow;                                                // hold the finish
+}
 function drawTeeGolfer(){
-  const teeVisible = S.phase==='aim'||S.phase==='power'||(S.phase==='flight'&&S.swingT!=null&&S.swingT<0.55);
+  const teeVisible = S.phase==='aim'||S.phase==='power'||(S.phase==='flight'&&S.swingT!=null&&S.swingT<0.7);
   if(!teeVisible) return;
-  const ch=curChar();
-  let clubAng=-2.3, lean=0;                          // address
-  if(S.swingT!=null){
-    const k=Math.min(1,S.swingT/0.5);
-    clubAng = -2.3 + k*4.6;                           // backswing → follow-through
-    lean = Math.sin(k*Math.PI)*0.12;
-  }
-  drawFigure(TEE.x-16, TEE.y-6, 1, {color:ch.color, face:ch.face,
-    armL:-1.4, armR:-1.75, legL:2.5, legR:0.7, lean, club:true, clubAng});
+  const ch=curChar(), p=swingPose();
+  drawFigure(TEE.x-16+p.dx, TEE.y-6, 1, {color:ch.color, face:ch.face,
+    armL:p.armL, armR:p.armR, legL:2.5, legR:0.7, lean:p.lean, club:true, clubAng:p.clubAng});
 }
 /* signature celebration poses */
 function poseFor(pose,k){
