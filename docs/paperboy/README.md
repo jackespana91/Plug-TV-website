@@ -9,6 +9,7 @@ Built studio-style, in phases, so design, math, and art each stay in their lane:
 | 1–2 | [`01-game-design-document.md`](01-game-design-document.md) | Player fantasy, core loop, UI, hazards, near misses, character, collectibles, neighborhoods, audio, session flow — **no math** |
 | 3 | [`02-math-model.md`](02-math-model.md) | RNG architecture, volatility profiles, multiplier ladders, RTP budget (96% target, 94–97 variants), max win, outcome-script mapping, certification path |
 | 4 | [`03-art-direction.md`](03-art-direction.md) | Palettes, typography, lighting, animation timing, VFX, UI transitions, accessibility, art-review checklist |
+| — | [`04-character-art-brief.md`](04-character-art-brief.md) | Production brief for replacing the current programmatic rider rig with commissioned/hand-drawn animation: camera constraints, exact palette, required poses & timings, delivery-format options |
 
 Reference concept: [`concept-mockup.png`](concept-mockup.png)
 
