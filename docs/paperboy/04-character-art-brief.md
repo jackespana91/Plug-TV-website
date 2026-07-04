@@ -2,6 +2,8 @@
 ## Character Art Brief — Ace (rider), for a cleaner animated replacement
 
 > This is a production brief for replacing the current programmatic canvas rig (`paperboy/src/game/scene.ts`, `drawRider`/`drawCrashed`) with cleaner, purpose-made animated art. Every number below is pulled directly from the live renderer, so a character built to this spec drops in without touching the perspective math, timing, or gameplay code.
+>
+> **v1.1 — style and delivery format confirmed.** A concept reference sheet was produced against this brief and approved: **pixel-art Ace, kept even though the rest of the world is smooth/painterly** (at his ~74×83px on-screen size the pixel grid mostly disappears anyway, so the two styles read as compatible rather than mismatched). Delivery format is **sprite sheets** (§6, option 1) — the confirmed per-pose frame counts from that reference are locked into §4 and §6 below. What's still needed: the actual production files (transparent PNG frame strips) — the reference sheet itself is a flattened concept image with captions baked in, not usable game assets.
 
 ---
 
@@ -52,18 +54,18 @@ The world around him is a golden-hour palette (peach sky, warm violet shadows ev
 
 The game drives a `pose` field that the renderer switches on every frame; below is the exact list, in the game's own words from the code, with real timings pulled from the director:
 
-| Pose | When it plays | Duration / loop | What it must show |
-|---|---|---|---|
-| **idle** | Attract screen, between bets | Loops indefinitely | Relaxed, casual — balance shifting, maybe a slow head-turn glance around. Personality beat, not urgent. |
-| **ride** | Default cruising state, most of the run | Loops indefinitely, tempo-linked | Pedaling cycle, gentle vertical bob, hair/jacket hem responds to speed. **Cadence must be able to sync to a speed value** (the game ramps speed from ~260 to 430 px/s across a run) — either give a base pedal-cycle length that can be time-scaled, or provide a 2–3 speed-tier variant. |
-| **throw** | Every delivery (every ~1.2–1.5s during a run) | 450ms, one-shot, returns to `ride` | Right arm reaches back toward the right-hip bag, grabs a paper, swings out and releases to the right side. This is the single most-repeated animation in the whole game — it needs to read instantly and stay charming on repeat viewing hundreds of times per session. |
-| **wheelie** | Milestone deliveries (×5/×10/×25/×50) and skateboard-hazard hops | 700ms, one-shot, returns to `ride` | Whole rig tips back slightly, a little showoff flourish — not a full stunt, just a beat of "nice." |
-| **tuck** | Near-miss slow-motion escape (the game's signature moment) | ~930ms real-time (played back in a 0.3× slow-mo window) | Braces down/forward, **head turns to show a slice of profile — cheek, eye, a "yikes/thrill" expression** — the one moment we break the always-from-behind rule. This is the emotional peak of the whole game; it should read as "oh no—phew." |
-| **skid** | Cashing out / reaching the flag | ~900ms into the win celebration | A stop skid, slight lean/rotation, arms could go up in celebration on bigger wins (tiered: modest for small wins, bigger flourish for ×10+, confetti-worthy for ×50+ — see GDD §12 win tiers if you want the full tier table). |
-| **tumble** | Wipeout (bust) | ~780ms of an actual tumble, rolling motion | Comedic, not painful — a cartoon spill, not a crash-test. |
-| **crashed / dazed** | Immediately follows tumble, holds until the loss screen | Holds ~450ms+ | **This is the one pose that faces the camera** — Ace sat up on the ground next to the toppled bike, spiral/dizzy eyes, papers fluttering down around him, a "...again?" half-smile. Front-facing is deliberate here: it's the one beat where we want to see his face and confirm he's fine. |
+| Pose | When it plays | Duration / loop | Frames (confirmed) | What it must show |
+|---|---|---|---|---|
+| **idle** | Attract screen, between bets | Loops indefinitely | **1** (static hold) | Relaxed, casual stand-by. Personality beat, not urgent — a static hold is fine; a subtle idle loop is a nice-to-have, not required. |
+| **ride** | Default cruising state, most of the run | Loops indefinitely, tempo-linked | **8**, looped | Pedaling cycle, gentle vertical bob, hair/jacket hem responds to speed. **Cadence must be able to sync to a speed value** (the game ramps speed from ~260 to 430 px/s across a run) — the playback rate will be scaled at runtime, so draw one clean neutral-speed loop and I'll retime it, no need for multiple speed variants. |
+| **throw** | Every delivery (every ~1.2–1.5s during a run) | 450ms, one-shot, returns to `ride` | **6** (≈13fps) | Right arm reaches back toward the right-hip bag, grabs a paper, swings out and releases to the right side. This is the single most-repeated animation in the whole game — it needs to read instantly and stay charming on repeat viewing hundreds of times per session. |
+| **wheelie** | Milestone deliveries (×5/×10/×25/×50) and skateboard-hazard hops | 700ms, one-shot, returns to `ride` | **7** (≈10fps) | Whole rig tips back slightly, a little showoff flourish — not a full stunt, just a beat of "nice." |
+| **tuck** | Near-miss slow-motion escape (the game's signature moment) | ~930ms real-time (played back in a 0.3× slow-mo window) | **5** | Braces down/forward, **head turns to show a slice of profile — cheek, eye, a "yikes/thrill" expression** — the one moment we break the always-from-behind rule. This is the emotional peak of the whole game; it should read as "oh no—phew." |
+| **skid** | Cashing out / reaching the flag | ~900ms into the win celebration | **6** (≈10fps) | A stop skid, slight lean/rotation, arms could go up in celebration on bigger wins (tiered: modest for small wins, bigger flourish for ×10+, confetti-worthy for ×50+ — see GDD §12 win tiers if you want the full tier table). |
+| **tumble** | Wipeout (bust) | ~780ms of an actual tumble, rolling motion | **8** (≈10fps) | Comedic, not painful — a cartoon spill, not a crash-test. |
+| **crashed / dazed** | Immediately follows tumble, holds until the loss screen | Holds ~450ms+ | **1** static, or a short **3-frame** loop | **This is the one pose that faces the camera** — Ace sat up on the ground next to the toppled bike, spiral/dizzy eyes, papers fluttering down around him, a "...again?" half-smile. Front-facing is deliberate here: it's the one beat where we want to see his face and confirm he's fine. A static hold is fine; a subtle 3-frame loop (e.g. spinning stars) is a nice-to-have. |
 
-Total: **7 back-view states + 1 front-facing recovery pose.** If budget only allows a subset, priority order is: `ride` (seen constantly) → `throw` (seen constantly) → `crashed` (emotional payoff of every loss) → `tuck` (emotional payoff of every near-miss) → `skid`/`tumble` → `wheelie`/`idle` (nice-to-have polish).
+Total: **7 back-view states + 1 front-facing recovery pose, 42 frames.** If budget only allows a subset, priority order is: `ride` (seen constantly) → `throw` (seen constantly) → `crashed` (emotional payoff of every loss) → `tuck` (emotional payoff of every near-miss) → `skid`/`tumble` → `wheelie`/`idle` (nice-to-have polish).
 
 ## 5. Lighting & finishing notes
 
@@ -72,16 +74,30 @@ Total: **7 back-view states + 1 front-facing recovery pose.** If budget only all
 - Secondary motion that sells speed: jacket hem flapping, loose papers in the bag riffling — amplitude should scale with how fast he's going (slow flutter at cruise, more agitated at top speed).
 - Silhouette test: he needs to read correctly as a small, back-facing figure at roughly 65–90px tall on a phone screen — check readability at that size, not just at a large working canvas size.
 
-## 6. Delivery format — pick one, tell me and I'll wire it in
+## 6. Delivery spec (confirmed: sprite sheets)
 
-The game is plain Canvas 2D (no Pixi/Phaser/game engine), so here are the realistic integration paths, cheapest-to-wire-in first:
+**Format:** one PNG per pose, transparent background, frames laid out as a single horizontal strip, left-to-right in playback order.
 
-1. **Sprite sheets (PNG, transparent background), one strip per pose.** Simplest to integrate — I just `drawImage` the current frame each tick. You/your artist controls frame count and timing per pose; give me the frame size, frames-per-pose, and intended fps and I'll match the director's existing timings to it. Easiest for hand-drawn or frame-by-frame animated work.
-2. **Rive (`.riv`) file with a state machine.** Best fit if you want smooth blended animation (not stepped frames) and small file size — I'd add the Rive web runtime and wire each of my 8 states to a state-machine input, and Rive handles the actual blending/easing. Great if your animator already works in Rive or After Effects (Rive imports rigged Lottie/AE-ish workflows reasonably well).
-3. **Lottie/Bodymovin JSON (from After Effects).** Works well for 2D vector animation with easing baked in; slightly heavier runtime than Rive but very common pipeline if your artist is AE-based.
-4. **Spine.** Excellent for this exact use case (mobile game character rigging) but has a runtime license cost — only worth it if you're already invested in the Spine ecosystem.
+**File naming** (drop-in match to the game's internal pose names):
 
-If you don't have a preference, my recommendation is **#1 (sprite sheets) for a fast turnaround**, or **#2 (Rive)** if you want the smoothest motion and are open to a bit more integration work on my side. Either way, transparent background, and please deliver at 2× the working size above for crispness on high-DPI screens.
+```
+ace_idle.png       1 frame
+ace_ride.png       8 frames, loop
+ace_throw.png      6 frames
+ace_wheelie.png    7 frames
+ace_tuck.png       5 frames
+ace_skid.png       6 frames
+ace_tumble.png     8 frames
+ace_crashed.png    1 frame (or 3, looped)
+```
+
+**Frame cell size:** every frame within a sheet must be the same fixed width × height (a uniform grid — I slice by `sheet width ÷ frame count`, so uneven frame widths within one file will misalign). Work at any resolution comfortably above the ~74×83px display size — draw at whatever native pixel-art resolution feels right for the style, then export at a consistent scale across all 8 files (e.g. all at 3× your working grid) so proportions match from sheet to sheet. Exact pixels don't need to hit 74×83 — I scale to fit at render time — but keep the **aspect ratio close to 74:83 (≈0.89:1)** so nothing looks stretched or squashed once it's placed in the game.
+
+**Rendering note:** I'll default to smooth (bilinear) scaling when drawing these into the canvas, matching how the reference sheet looks (detailed pixel-art *style*, not a raw blown-up low-res grid). If you actually want the harder, blocky "nearest-neighbor" pixel look when it's scaled up in-game, say so — it's a one-line rendering change on my end (`imageSmoothingEnabled = false` / CSS `image-rendering: pixelated`), but it also means the source art should be authored at a genuinely small native pixel grid (e.g. 24–32px tall) rather than the more detailed style in the reference sheet.
+
+**Optional but helpful:** a small manifest (JSON or just plain text) confirming frame count and intended fps per file, in case anything above needs adjusting once you see the real art in motion — I'll match the timings above regardless, but it's a good sanity check both ways.
+
+Once these 8 files exist, hand them over and I'll wire them into `scene.ts` (replacing `drawRider`/`drawCrashed`) and `director.ts` (pose triggers are unchanged — same state names, same timings).
 
 ---
 
