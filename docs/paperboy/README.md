@@ -16,3 +16,5 @@ Reference concept: [`concept-mockup.png`](concept-mockup.png)
 **Core principle threaded through all three:** the player never controls the character — a certified RNG fixes the outcome the instant DELIVER is pressed, and everything on screen is a dramatization of that result. Presentation never changes probability; probability never depends on presentation.
 
 **Reference implementation:** [`../../paperboy/`](../../paperboy/) — the outcome engine (tested + Monte-Carlo-verified against doc 02) and a playable canvas prototype of the presentation layer. Doc 02 is at v1.1: two of its v1.0 figures were corrected after simulation caught them (see the doc's header changelog).
+
+**Stake Engine math port:** [`../../stake/`](../../stake/) — the outcome engine ported to Stake Engine's public math-sdk (committed-target model, math doc §8.5), curated to 24 modes (3 routes × 8 preset cash-out targets) since their platform has no mechanism for a continuously player-chosen bet parameter. Run end to end in a sandbox against Stake's real base classes, not just written against assumptions — see that folder's README for exactly what was verified.
