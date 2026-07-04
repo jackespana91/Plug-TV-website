@@ -170,6 +170,15 @@ pre-simulated *books*: at bet time the RGS picks a simulation weighted by a look
 table and returns its `payoutMultiplier` + `events`; the client only plays back the
 story. That is literally this game's architecture, so the integration is thin.
 
+Two separate deliverables, matching Stake's two SDKs:
+
+1. **Math package** (`stake-engine/`) — the math-sdk output: books + lookup tables
+   + `index.json`. Covered in §7.1.
+2. **Frontend** — Stake requires the game frontend to be built on its **web-sdk**
+   (a Svelte 5 + PixiJS 8 monorepo); custom HTML/canvas frontends are not accepted.
+   The web-sdk game module lives in `stake-web-sdk/` and is covered in §7.5. The
+   canvas prototype (`index.html`) remains the design reference and standalone demo.
+
 ### 7.1 Math package (`stake-engine/`)
 
 `node stake-engine/generate-math.mjs` reads the paytable block out of `index.html`
@@ -191,34 +200,66 @@ Mode names on the wire: `wedge`, `short_iron`, `long_iron`, `three_wood`, `drive
 `masters`, all `cost: 1.0` (Masters can be repriced as a feature-buy by raising its
 mode cost — the table already carries the 100x top).
 
-### 7.2 Client RGS adapter (in `index.html`)
+### 7.2 The bookEvent contract
 
-When launched with Stake's query params (`?sessionID=…&rgs_url=…&currency=…`) the
-game switches from demo credits to the RGS wallet, with amounts in micro-units
-(1,000,000 = 1.00):
+Each generated book carries two events the frontend consumes:
 
-- boot → `POST /wallet/authenticate` — real balance + operator bet levels
-  (`config.betLevels`) replace the demo defaults
-- swing release → `POST /wallet/play {amount, mode}` — server draws the book; the
-  client stages the animation from the returned tier and `payoutMultiplier/100`
-- result → `POST /wallet/end-round` — credits the win; balance re-synced from the
-  response. Connection failure at swing time aborts cleanly ("shot not placed").
+```json
+{ "index": 0, "type": "shot", "club": "driver", "tier": "green", "payoutMultiplier": 100 }
+{ "index": 1, "type": "finalWin", "amount": 100 }
+```
 
-### 7.3 Local end-to-end harness
+`payoutMultiplier`/`amount` are integers ×100. The `shot` event's `tier` selects
+the animation; `payoutMultiplier` distinguishes the 25x / 50x / 100x hole-in-one
+presentations. This shape is mirrored in TypeScript at
+`stake-web-sdk/apps/plug-golf/src/game/typesBookEvent.ts`; the two must stay in
+sync (the generator and the type are the two ends of one contract).
 
-`node stake-engine/mock-rgs.mjs` serves the *generated math package* through the
-RGS endpoints (weighted draw from the lookup tables, events from the books). Open
-`index.html?sessionID=test&rgs_url=http://127.0.0.1:8791` to play against it. The
-automated test drives rounds through this stack and asserts the client's rendered
-outcome equals the server's drawn book and that balances reconcile after settle.
+### 7.3 Reference RGS adapter + local harness (prototype only)
+
+The canvas prototype includes a direct RGS adapter (used when launched with
+`?sessionID=…&rgs_url=…`) and a mock RGS (`stake-engine/mock-rgs.mjs`) that serves
+the generated math package through the real endpoints. This was the proof that the
+outcome-first design settles correctly against a wallet: the automated harness
+drives rounds through `wallet/play` → `wallet/end-round` and asserts the rendered
+outcome equals the server's drawn book and balances reconcile. In the shipping
+game this wallet flow is handled by the web-sdk's `state-bet` machine (§7.5), not
+by hand-rolled fetches — the prototype adapter stays as a reference/demo.
 
 ### 7.4 Remaining for submission
 
-- `zstd` compression of books + upload via the Stake Engine dashboard, then ACP
-  (Acceptance Criteria Process) checks on their side.
-- Decide Masters pricing (`cost` in `index.json`).
+- Build the web-sdk frontend in a monorepo checkout and reconcile the two
+  integration seams (§7.5); upload it plus the `zstd`-compressed math package via
+  the Stake Engine dashboard, then ACP (Acceptance Criteria Process) checks.
+- Decide Masters pricing (`cost` in `index.json` — feature-buy vs equal stake).
 - Operator-facing assets: game tile art, name, description, max-win statement
   (currently 100x in Masters, 50x base game via Driver).
+
+### 7.5 Web-sdk frontend (`stake-web-sdk/`)
+
+The game module that drops into `apps/plug-golf/` of a web-sdk checkout. It plugs
+into the SDK pipeline `RGS → book → bookEvents → bookEventHandlerMap →
+emitterEvents → components`:
+
+- **Pure game logic** (`src/game/`) — ported out of the prototype into
+  framework-free TypeScript: `shotEngine.ts` compiles an outcome into a
+  declarative animation `Timeline` (flight/bounce/roll/lip/drop segments +
+  caption/sfx/camera/fx cues) with a seeded RNG so a book id always renders the
+  same story; `bookEventHandlerMap.ts` is the SDK glue. This layer is typechecked
+  and unit-tested standalone in this repo (`npm run check`, `npm run test:engine` —
+  every tier × club asserted: opens at the tee, sane duration, hole-in-ones drop,
+  lip-outs stay out, replay-deterministic).
+- **Svelte 5 + PixiJS 8 components** (`src/components/`) — `GolfScene.svelte` walks
+  the timeline and fires cues; `Game.svelte` hosts the club/aim/power UI and calls
+  `state-bet` to spin. These build only inside the monorepo (they import
+  `pixi-svelte` and SDK contexts); written to the reference `lines` game's
+  conventions.
+- **Storybook** (`src/stories/`) — force any tier's book and watch it play, the
+  SDK's standard way to verify book playback.
+
+See `stake-web-sdk/README.md` for the drop-in steps and the two seams to reconcile
+against the current SDK version (context keys in `GolfScene.svelte`, the
+`state-bet` play API in `Game.svelte`).
 
 ## 8. Running the prototype
 

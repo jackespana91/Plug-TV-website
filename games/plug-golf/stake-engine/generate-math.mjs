@@ -65,7 +65,7 @@ for (const [key, t] of Object.entries(cfg.clubs)) {
     books.push(JSON.stringify({
       id,
       events: [
-        { index: 0, type: 'shot', club: key, tier: tierFor(mult) },
+        { index: 0, type: 'shot', club: key, tier: tierFor(mult), payoutMultiplier: pm },
         { index: 1, type: 'finalWin', amount: pm },
       ],
       payoutMultiplier: pm,
