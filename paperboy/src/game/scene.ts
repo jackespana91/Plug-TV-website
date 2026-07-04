@@ -3,20 +3,66 @@
  * a retro-arcade homage (GDD/art doc addendum): a tilted, receding
  * vanishing-point road quoting the original 1985 Paperboy cabinet's
  * signature camera, rendered with richer color/lighting and smooth
- * animation rather than literal low-res pixel art. Everything is drawn
- * programmatically: no image assets.
+ * animation rather than literal low-res pixel art. The street, houses,
+ * hazards and effects are all drawn programmatically; Ace himself is a
+ * set of commissioned sprite sheets (see `docs/paperboy/04-character-art-brief.md`)
+ * loaded from `/sprites/ace_<pose>.png`, one transparent horizontal frame
+ * strip per pose, drawn from a fixed bottom-center anchor per §6 of that brief.
  *
  * The scene is a dumb dramatizer: it renders whatever `World` state the
  * director has set. It contains no game or money logic.
  */
 import { hash01 } from './presentation';
 
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
 export const VIEW_W = 960;
 export const VIEW_H = 540;
+
+/* ---------------- Ace sprite sheets ----------------
+ * Frame cell sizes and anchor match how the sheets were built: each frame is
+ * tightly cropped to its own content, then centered horizontally and
+ * bottom-aligned 6px up from the cell's bottom edge — so the character's
+ * ground-contact point sits at (frameW/2, frameH-6) in every frame, of
+ * every pose, letting the renderer draw from one fixed on-screen anchor
+ * regardless of which pose is active.
+ */
+type SpritePose = 'idle' | 'ride' | 'throw' | 'wheelie' | 'tuck' | 'skid' | 'tumble' | 'crashed';
+
+interface SpriteSheet {
+  image: HTMLImageElement;
+  frames: number;
+  frameW: number;
+  frameH: number;
+  loaded: boolean;
+}
+
+const SPRITE_DEFS: Record<SpritePose, { frames: number; frameW: number; frameH: number }> = {
+  idle: { frames: 1, frameW: 137, frameH: 194 },
+  ride: { frames: 7, frameW: 169, frameH: 203 },
+  throw: { frames: 6, frameW: 185, frameH: 195 },
+  wheelie: { frames: 1, frameW: 182, frameH: 186 },
+  tuck: { frames: 5, frameW: 179, frameH: 165 },
+  skid: { frames: 4, frameW: 205, frameH: 134 },
+  tumble: { frames: 6, frameW: 531, frameH: 164 },
+  crashed: { frames: 1, frameW: 233, frameH: 153 },
+};
+
+/** Bottom margin (px, native res) baked into every sheet when it was built. */
+const SPRITE_ANCHOR_MARGIN = 6;
+/** Scales the sheets' native pixel size down to the game's on-screen rider size (~90px tall for `ride`). */
+const SPRITE_SCALE = 90 / SPRITE_DEFS.ride.frameH;
+
+function loadSpriteSheets(): Record<SpritePose, SpriteSheet> {
+  const out = {} as Record<SpritePose, SpriteSheet>;
+  for (const pose of Object.keys(SPRITE_DEFS) as SpritePose[]) {
+    const def = SPRITE_DEFS[pose];
+    const image = new Image();
+    const sheet: SpriteSheet = { image, frames: def.frames, frameW: def.frameW, frameH: def.frameH, loaded: false };
+    image.onload = () => { sheet.loaded = true; };
+    image.src = `/sprites/ace_${pose}.png`;
+    out[pose] = sheet;
+  }
+  return out;
+}
 
 /* ---------------- perspective camera ----------------
  * A single vanishing point with linear scale-vs-depth falloff, in the
@@ -159,11 +205,13 @@ export class Scene {
   private noise: HTMLCanvasElement;
   private fireflies: Firefly[] = [];
   private motes: Mote[] = [];
+  private sprites: Record<SpritePose, SpriteSheet>;
 
   constructor(canvas: HTMLCanvasElement) {
     canvas.width = VIEW_W;
     canvas.height = VIEW_H;
     this.ctx = canvas.getContext('2d')!;
+    this.sprites = loadSpriteSheets();
     // pre-rendered asphalt noise tile
     this.noise = document.createElement('canvas');
     this.noise.width = 256;
@@ -1061,251 +1109,67 @@ export class Scene {
    * sits on his right hip so the throwing arm and the delivery lane (which
    * fans right, per DELIVER_POINT) agree with each other.
    */
+  /**
+   * Ace, drawn from commissioned sprite sheets — GDD/art doc addendum,
+   * docs/paperboy/04-character-art-brief.md. Pose selection mirrors the old
+   * procedural rig's timing: `ride` is tempo-synced to wheelAngle (itself
+   * speed-driven), the one-shot poses map poseT across their sheet's frame
+   * count, and `tumble` switches to the single `crashed` frame once poseT
+   * passes the roll duration — there is no separate `crashed` RiderPose,
+   * exactly as in the rig this replaced.
+   */
   private drawRider(g: CanvasRenderingContext2D, w: World): void {
-    w.bob += (w.speed > 10 ? 0.11 : 0.035);
-    const bobY = w.pose === 'ride' ? Math.sin(w.bob) * 2.5 : 0;
-    const sway = w.pose === 'ride' ? Math.sin(w.bob * 0.5) * 3 : 0;
-    const x = RIDER_X;
-    const y = GROUND_Y - 18 + bobY;
-    const spin = this.wheelAngle;
-    const fast = w.speed > 340;
+    let sheet = this.sprites[w.pose === 'idle' ? 'idle'
+      : w.pose === 'ride' ? 'ride'
+      : w.pose === 'throw' ? 'throw'
+      : w.pose === 'wheelie' ? 'wheelie'
+      : w.pose === 'tuck' ? 'tuck'
+      : w.pose === 'skid' ? 'skid'
+      : 'tumble'];
+    let frameIndex = 0;
 
-    g.save();
-    g.translate(x, y);
-
-    if (w.pose === 'tumble') {
-      const t = Math.min(1, w.poseT);
-      if (t < 0.65) {
-        g.rotate(t * Math.PI * 1.6);
-        g.translate(0, -t * 10);
-      } else {
-        // sat up, dazed, facing camera — stars handled by director
-        g.restore();
-        this.drawCrashed(g, x, y, w.poseT);
-        return;
-      }
-    } else if (w.pose === 'wheelie') {
-      g.translate(0, 4);
-      g.rotate(-0.14 * Math.min(1, w.poseT * 3));
-      g.translate(0, -4);
-    } else if (w.pose === 'skid') {
-      g.rotate(-0.06);
+    if (w.pose === 'ride') {
+      frameIndex = Math.floor((this.wheelAngle / (Math.PI * 2)) * sheet.frames) % sheet.frames;
+    } else if (w.pose === 'throw') {
+      frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.45) * sheet.frames));
     } else if (w.pose === 'tuck') {
-      g.translate(0, 6);
-    }
-
-    // ground shadow
-    g.fillStyle = VIOLET(0.4);
-    g.beginPath();
-    g.ellipse(sway * 0.4, 20, 30, 7, 0, 0, Math.PI * 2);
-    g.fill();
-
-    // rear wheel, dead-on from behind — the bike's whole visible wheel silhouette
-    g.save();
-    g.translate(sway * 0.5, 6);
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 6;
-    g.beginPath(); g.arc(0, 0, 17, 0, Math.PI * 2); g.stroke();
-    if (fast) {
-      g.strokeStyle = 'rgba(139,144,163,0.5)';
-      g.lineWidth = 7;
-      g.beginPath(); g.arc(0, 0, 10, 0, Math.PI * 2); g.stroke();
-    } else {
-      g.strokeStyle = '#8B90A3';
-      g.lineWidth = 1.6;
-      for (let s = 0; s < 6; s++) {
-        const a = spin + (s * Math.PI * 2) / 6;
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); g.stroke();
+      frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.28) * sheet.frames));
+    } else if (w.pose === 'skid') {
+      frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.5) * sheet.frames));
+    } else if (w.pose === 'tumble') {
+      if (w.poseT >= 0.6) {
+        sheet = this.sprites.crashed;
+      } else {
+        frameIndex = Math.min(sheet.frames - 1, Math.floor((w.poseT / 0.6) * sheet.frames));
       }
     }
-    g.fillStyle = '#8B90A3';
-    g.beginPath(); g.arc(0, 0, 3.4, 0, Math.PI * 2); g.fill();
-    g.restore();
+    // idle, wheelie: single-frame sheets, frameIndex stays 0
 
-    // seat post + seat
-    g.strokeStyle = '#D64545';
-    g.lineWidth = 4.5;
-    g.lineCap = 'round';
-    g.beginPath(); g.moveTo(sway * 0.5, -6); g.lineTo(sway * 0.5, -20); g.stroke();
-    g.fillStyle = '#23273A';
-    g.fillRect(sway * 0.5 - 7, -24, 14, 5);
+    if (!sheet.loaded) return;
 
-    // pedalling legs, both visible side by side (behind view), alternating height
-    const crank = spin * 0.55;
-    const throwT = w.pose === 'throw' ? Math.min(1, w.poseT * 2.5) : 0;
-    const lean = Math.min(1, w.speed / 430);
-    for (const [lx, ph, color] of [[-11, 0, '#3E4658'], [11, Math.PI, '#4A5568']] as const) {
-      const bob = Math.sin(crank + ph);
-      const hipX = lx * 0.4 + sway * 0.4, hipY = -18;
-      const footX = lx * 0.9 + sway * 0.3, footY = 14 + bob * 8;
-      const kneeX = lx * 1.1, kneeY = -2 - bob * 3;
-      g.strokeStyle = color;
-      g.lineWidth = 5;
-      g.lineCap = 'round';
-      g.beginPath();
-      g.moveTo(hipX, hipY);
-      g.quadraticCurveTo(kneeX, kneeY, footX, footY);
-      g.stroke();
-      g.fillStyle = '#F4F1E8';
-      g.fillRect(footX - 4, footY - 2, 8, 4);
-    }
+    w.bob += w.speed > 10 ? 0.11 : 0.035;
+    const bobY = w.pose === 'ride' ? Math.sin(w.bob) * 2 : 0;
+    const dw = sheet.frameW * SPRITE_SCALE;
+    const dh = sheet.frameH * SPRITE_SCALE;
+    const anchorX = (sheet.frameW / 2) * SPRITE_SCALE;
+    const anchorY = (sheet.frameH - SPRITE_ANCHOR_MARGIN) * SPRITE_SCALE;
 
-    // torso — jacket back, shoulders, diagonal bag strap to a right-hip bag
-    g.save();
-    g.translate(sway * 0.6, -30);
-    g.rotate(lean * 0.05);
-    g.fillStyle = '#3A6BC5';
-    this.rr(g, -13, -16, 26, 28, 9);
-    g.fill();
-    g.fillStyle = '#2E55A0';
-    this.rr(g, -13, 4, 26, 10, 5);
-    g.fill();
-    // jacket hem fluttering (the constant speed tell — art doc §4)
-    const flap = Math.sin(this.t * 16) * (2 + lean * 4);
-    g.fillStyle = '#2E55A0';
-    g.beginPath();
-    g.moveTo(-13, 12);
-    g.quadraticCurveTo(-17 - lean * 5, 16 + flap * 0.4, -13 - lean * 7, 21 + flap);
-    g.lineTo(-8, 19);
-    g.closePath();
-    g.fill();
-    // diagonal bag strap across the back
-    g.strokeStyle = '#B8A26E';
-    g.lineWidth = 4;
-    g.beginPath(); g.moveTo(-10, -14); g.lineTo(11, 11); g.stroke();
-    // canvas bag at the right hip, rolled papers peeking out
-    g.fillStyle = '#D9C79E';
-    g.beginPath(); g.ellipse(13, 13, 9, 11, 0.2, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#B8A26E';
-    g.lineWidth = 2;
-    g.stroke();
-    for (let p = 0; p < 3; p++) {
-      g.fillStyle = p === 1 ? '#EDE8DA' : '#F4F1E8';
-      g.save();
-      g.translate(9 + p * 3, 4);
-      g.rotate(-0.4 + p * 0.16);
-      g.fillRect(-2, -4, 4.5, 9);
-      g.restore();
-    }
-    g.restore();
-
-    // left arm — steady on the grip
-    g.strokeStyle = '#3A6BC5';
-    g.lineWidth = 5;
-    g.lineCap = 'round';
-    g.beginPath();
-    g.moveTo(sway * 0.6 - 10, -40);
-    g.quadraticCurveTo(sway * 0.6 - 17, -34, sway * 0.6 - 20, -25);
-    g.stroke();
-    g.fillStyle = '#F0C49A';
-    g.beginPath(); g.arc(sway * 0.6 - 20, -25, 3.5, 0, Math.PI * 2); g.fill();
-
-    // right arm — on the grip, or reaching to the bag then swinging the throw out to the right
-    g.strokeStyle = '#3A6BC5';
-    g.beginPath();
-    let handX: number, handY: number;
-    if (throwT > 0 && throwT < 0.4) {
-      const p = throwT / 0.4;
-      handX = lerp(sway * 0.6 + 10, 12, p);
-      handY = lerp(-40, 6, p);
-      g.moveTo(sway * 0.6 + 10, -40);
-      g.quadraticCurveTo(sway * 0.6 + 20, -18, handX, handY);
-    } else if (throwT >= 0.4) {
-      const p = (throwT - 0.4) / 0.6;
-      const aa = -1.7 + p * 2.3;
-      handX = 14 + Math.cos(aa) * 28;
-      handY = 4 + Math.sin(aa) * 28 - p * 14;
-      g.moveTo(sway * 0.6 + 10, -34);
-      g.quadraticCurveTo(24, -8, handX, handY);
-    } else {
-      handX = sway * 0.6 + 20;
-      handY = -25;
-      g.moveTo(sway * 0.6 + 10, -40);
-      g.quadraticCurveTo(sway * 0.6 + 17, -34, handX, handY);
-    }
-    g.stroke();
-    g.fillStyle = '#F0C49A';
-    g.beginPath(); g.arc(handX, handY, 3.5, 0, Math.PI * 2); g.fill();
-
-    // head — backwards cap seen from behind; glances back over the shoulder during a near-miss tuck
-    const turn = w.pose === 'tuck' ? 0.85 : 0;
-    g.save();
-    g.translate(sway * 0.7, -46);
-    g.fillStyle = '#F0C49A';
-    g.fillRect(-5, 2, 10, 8); // neck
-    g.fillStyle = '#6E4A2C';
-    g.fillRect(-7, -2, 14, 6); // hair peeking below the cap
-    g.fillStyle = '#F0C49A';
-    g.beginPath(); g.ellipse(turn * 4, -6, 9 - turn * 1.5, 9, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#E0AE85';
-    g.beginPath(); g.arc(-7 + turn * 10, -4, 2.2, 0, Math.PI * 2); g.fill(); // ear
-    if (turn > 0.2) {
-      g.fillStyle = '#F0C49A';
-      g.beginPath(); g.arc(6 * turn, -5, 5 * turn, -0.6, 0.9); g.fill(); // cheek peeking
-      g.fillStyle = '#23273A';
-      g.beginPath(); g.arc(7 * turn, -6, 1.4, 0, Math.PI * 2); g.fill(); // eye
-      g.fillStyle = 'rgba(255,138,157,0.5)';
-      g.beginPath(); g.arc(8 * turn, -2, 2, 0, Math.PI * 2); g.fill(); // blush
-    }
-    // backwards cap: crown wraps the back/top of the head, brim peeks out low at the neck
-    g.fillStyle = '#D64545';
-    g.beginPath(); g.arc(turn * 3, -9, 9.5, Math.PI * 0.05, Math.PI * 1.5); g.fill();
-    g.beginPath(); g.ellipse(turn * 3, -1, 8, 3, 0, 0, Math.PI); g.fill();
-    g.fillStyle = '#F4F1E8';
-    g.beginPath(); g.arc(turn * 3, -14, 2, 0, Math.PI * 2); g.fill(); // cap button
-    // warm rim light from the sun side (art doc §5)
-    g.strokeStyle = 'rgba(255,233,196,0.85)';
-    g.lineWidth = 2;
-    g.beginPath(); g.arc(turn * 3 - 2, -9, 9.5, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
-    g.restore();
-
-    g.restore();
+    g.drawImage(
+      sheet.image,
+      frameIndex * sheet.frameW, 0, sheet.frameW, sheet.frameH,
+      RIDER_X - anchorX, GROUND_Y - anchorY + bobY, dw, dh,
+    );
 
     // tire dust when moving hard
     if (w.speed > 300 && Math.random() < 0.3) {
       this.particles.push({
-        x: x - 20, y: GROUND_Y + 12, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30,
+        x: RIDER_X - 20, y: GROUND_Y + 12, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30,
         age: 0, life: 0.5, size: 3 + Math.random() * 3, color: 'rgba(184,175,164,0.5)',
         gravity: -40, shape: 'glow', spin: 0,
       });
     }
   }
 
-  private drawCrashed(g: CanvasRenderingContext2D, x: number, y: number, t: number): void {
-    // bike on the ground
-    g.save();
-    g.translate(x - 34, y + 10);
-    g.rotate(-0.4);
-    g.strokeStyle = '#D64545';
-    g.lineWidth = 4;
-    g.beginPath(); g.moveTo(-18, 0); g.lineTo(8, -8); g.lineTo(18, 2); g.stroke();
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 4;
-    g.beginPath(); g.arc(-18, 2, 12, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.arc(18, 4, 12, 0, Math.PI * 2); g.stroke();
-    g.restore();
-    // Ace sitting up, dazed but okay (losses are slapstick — GDD §10)
-    g.save();
-    g.translate(x + 16, y + 6);
-    g.fillStyle = VIOLET(0.4);
-    g.beginPath(); g.ellipse(0, 14, 24, 5, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#4A5568';
-    this.rr(g, -12, 2, 26, 8, 4); g.fill(); // legs out flat
-    g.fillStyle = '#3A6BC5';
-    this.rr(g, -9, -18, 18, 22, 7); g.fill();
-    g.fillStyle = '#F0C49A';
-    g.beginPath(); g.arc(0, -26, 9, 0, Math.PI * 2); g.fill();
-    const wob = Math.sin(t * 6) * 0.15;
-    g.fillStyle = '#D64545';
-    g.beginPath(); g.arc(-1, -29 + wob, 9, Math.PI * 0.95, Math.PI * 2.05); g.fill();
-    // spiral eyes
-    g.strokeStyle = '#23273A';
-    g.lineWidth = 1.4;
-    for (const ex of [-3, 4]) {
-      g.beginPath(); g.arc(ex, -26, 2.4, 0, Math.PI * 1.6 + t); g.stroke();
-    }
-    g.restore();
-  }
 
   private drawPaper(g: CanvasRenderingContext2D, w: World): void {
     const arc = w.paperArc!;

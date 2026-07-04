@@ -1,6 +1,6 @@
 # Paperboy: The Run — Reference Implementation
 
-Playable prototype of the game specified in [`../docs/paperboy/`](../docs/paperboy/). Zero runtime dependencies; all art and sound are generated in code.
+Playable prototype of the game specified in [`../docs/paperboy/`](../docs/paperboy/). Zero runtime dependencies; the street, houses, hazards, and sound are all generated in code — Ace himself is commissioned sprite art (`public/sprites/ace_*.png`, see `docs/paperboy/04-character-art-brief.md`).
 
 ```bash
 npm install
@@ -23,7 +23,7 @@ src/sim/       lab-style Monte-Carlo verification of the doc's claims
 
 src/game/      THE THEATRE (GDD 01, art doc 03) — dramatizes a finished script
   director.ts    beat sequencer: approach → hazard → deliver → flag or bust
-  scene.ts       canvas street renderer (Golden Hour Suburbia palette)
+  scene.ts       canvas street renderer (Golden Hour Suburbia palette) + Ace's sprite playback
   audio.ts       synthesized sound design (ladder motif, thwack, near-miss)
   presentation.ts SEPARATE presentation RNG — hazard skins only, never value
   main.ts        HUD, demo wallet, flag picker + DELIVER button

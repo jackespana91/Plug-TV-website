@@ -1,9 +1,22 @@
 # PAPERBOY: THE RUN
 ## Character Art Brief — Ace (rider), for a cleaner animated replacement
 
-> This is a production brief for replacing the current programmatic canvas rig (`paperboy/src/game/scene.ts`, `drawRider`/`drawCrashed`) with cleaner, purpose-made animated art. Every number below is pulled directly from the live renderer, so a character built to this spec drops in without touching the perspective math, timing, or gameplay code.
+> This document is now historical/reference: **Ace is live as sprite art.** `paperboy/src/game/scene.ts`'s procedural `drawRider`/`drawCrashed` have been replaced by `paperboy/public/sprites/ace_<pose>.png` — one transparent frame-strip PNG per pose, loaded and drawn from a fixed bottom-center anchor. Everything below is kept as the record of what was specified and how it was assembled.
 >
-> **v1.1 — style and delivery format confirmed.** A concept reference sheet was produced against this brief and approved: **pixel-art Ace, kept even though the rest of the world is smooth/painterly** (at his ~74×83px on-screen size the pixel grid mostly disappears anyway, so the two styles read as compatible rather than mismatched). Delivery format is **sprite sheets** (§6, option 1) — the confirmed per-pose frame counts from that reference are locked into §4 and §6 below. What's still needed: the actual production files (transparent PNG frame strips) — the reference sheet itself is a flattened concept image with captions baked in, not usable game assets.
+> **v1.2 — integrated.** Two AI-generated concept sheets (each a 4-row grid of pose sequences, no reliable per-pose labels) were mined for usable frames: row/column boundaries were detected programmatically (alpha-channel density analysis), each candidate frame was visually inspected, and the cleanest, single-source sequence was picked per pose to avoid mixing art styles within one loop. Coverage is real but uneven — some poses hit their confirmed frame count, others are an honest reduction:
+>
+> | Pose | Target | Shipped | Source |
+> |---|---|---|---|
+> | idle | 1 | 1 | reused first ride frame (no distinct idle art existed) |
+> | ride | 8 | **7** | single generation, clean full cycle |
+> | throw | 6 | **6** ✓ | single generation, wind-up progression (release itself is the game's separate paper-arc sprite, not Ace's arm) |
+> | wheelie | 7 | **1** (held) | only one clean wheelie frame existed across both sheets |
+> | tuck | 5 | **5** ✓ | single generation, full brace sequence |
+> | skid | 6 | **4** | single generation, dust progression |
+> | tumble | 8 | **6** | mixed from both sheets (chaotic/scattered frames tolerate mixing better than a tight loop like ride would) |
+> | crashed | 1 (or 3-loop) | 1 | exact match to spec — dizzy stars, sitting, facing camera |
+>
+> `wheelie` and `skid` are the two honest gaps — a static wheelie hold and a slightly short skid — both easy to upgrade in place later (drop in a new `ace_wheelie.png`/`ace_skid.png` with more frames, no code change needed) whenever more art gets generated.
 
 ---
 
@@ -161,6 +174,16 @@ Jacket hem and bag strap should have a small amount of independent sway rather t
 
 **CRASHED/DAZED:** the delivered key frame already works as a static hold. If you want the optional 3-frame loop, the only thing that needs to move is the ring of stars/halo above his head, rotating through 3 positions (e.g. 0°/120°/240°) — body, face, and everything else stays locked in the same pose across all 3 frames.
 
+## 8. Implementation notes (how it's actually wired up)
+
+For whoever touches this next — `paperboy/src/game/scene.ts`:
+
+- `SPRITE_DEFS` records each sheet's exact frame count and native frame-cell size (width/height in source pixels) — **this must match the real PNG dimensions**, since frames are sliced by `sheetWidth ÷ frameCount` at a fixed cell size, not detected dynamically.
+- Every sheet was built bottom-anchored: each frame is tightly cropped to its own opaque content, then centered horizontally and placed so its bottom edge sits exactly `SPRITE_ANCHOR_MARGIN` (6px, native res) above the cell's bottom edge. That's what lets the renderer always draw from one fixed screen point (`RIDER_X`, `GROUND_Y`) regardless of pose — **any replacement sheet must be built the same way**, or Ace will jump/drift when poses switch.
+- `SPRITE_SCALE` is a single global scale factor (native px → screen px), derived from the `ride` sheet hitting ~90px display height. It is *not* renormalized per pose — a crouched pose (tuck, skid) is supposed to look shorter on screen than an upright one (ride, throw); scaling every pose to the same display height would be wrong.
+- Frame selection per pose (in `drawRider`): `ride` reads off `this.wheelAngle` (already speed-driven, so the cycle naturally tempo-syncs); `throw`/`tuck`/`skid`/`tumble` map `w.poseT` across an assumed real-world duration for that pose (450ms / 280ms / 500ms / 600ms — see the code comment for where each number comes from in `director.ts`); `idle`/`wheelie` are single-frame holds. `tumble` switches to the `crashed` sheet once `poseT` passes its duration — there's still no separate `crashed` `RiderPose` state, exactly as in the rig this replaced.
+- To add more frames to `wheelie` or `skid` later (see the coverage gaps above): rebuild that one PNG the same way (bottom-anchored, uniform cell size) and bump its `frames`/`frameW`/`frameH` in `SPRITE_DEFS` — no other code changes needed.
+
 ---
 
-*Reference: the current programmatic version lives in `paperboy/src/game/scene.ts` (`drawRider`, `drawCrashed`) if your artist wants to see exactly what's being replaced — screenshots are in the session's scratchpad, or I can export fresh ones on request.*
+*Historical reference: the programmatic version this replaced lived in `paperboy/src/game/scene.ts` (`drawRider`, `drawCrashed`) — still visible in git history if useful.*
