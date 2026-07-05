@@ -242,10 +242,14 @@ by hand-rolled fetches — the prototype adapter stays as a reference/demo.
 
 ### 7.4 Remaining for submission
 
-- Build the web-sdk frontend in a monorepo checkout and reconcile the two
-  integration seams (§7.5); upload it plus the `zstd`-compressed math package via
-  the Stake Engine dashboard, then ACP (Acceptance Criteria Process) checks.
+The full, ordered checklist is in **`stake-engine/SUBMISSION.md`**. In brief:
+
+- Build the web-sdk frontend in a monorepo checkout and reconcile the integration
+  seams (§7.5); upload it plus the `zstd`-compressed math package via the Stake
+  Engine dashboard, then ACP (Acceptance Criteria Process) checks.
 - Decide Masters pricing (`cost` in `index.json` — feature-buy vs equal stake).
+- Compliance review per market (skill-presentation disclosure, engineered
+  near-miss flag, RTP + max-win statements).
 - Operator-facing assets: game tile art, name, description, max-win statement
   (currently 100x in Masters, 50x base game via Driver).
 
@@ -263,10 +267,16 @@ emitterEvents → components`:
   and unit-tested standalone in this repo (`npm run check`, `npm run test:engine` —
   every tier × club asserted: opens at the tee, sane duration, hole-in-ones drop,
   lip-outs stay out, replay-deterministic).
+- **Pure input model** (`src/game/preShot.ts`) — the aim-clamp, pull→power, and
+  cosmetic swing-quality logic, ported out of the prototype and unit-tested
+  headless (aim clamps to the green, pull clamps 0–1, quality peaks at the pure
+  pull, none of it touches payout).
 - **Svelte 5 + PixiJS 8 components** (`src/components/`) — `GolfScene.svelte` walks
-  the timeline and fires cues; `Game.svelte` hosts the club/aim/power UI and calls
-  `state-bet` to spin. These build only inside the monorepo (they import
-  `pixi-svelte` and SDK contexts); written to the reference `lines` game's
+  the timeline and fires cues; `Game.svelte` drives the full club → aim → power →
+  swing flow on top of `preShot.ts` (SVG reticle + aim line + pull-back power
+  meter overlay) and calls `state-bet` to spin, threading the player's aim +
+  quality into the handler context. These build only inside the monorepo (they
+  import `pixi-svelte` and SDK contexts); written to the reference `lines` game's
   conventions.
 - **Storybook** (`src/stories/`) — force any tier's book and watch it play, the
   SDK's standard way to verify book playback.

@@ -16,6 +16,7 @@ apps/plug-golf/
 │   │   ├── typesBookEvent.ts     # RGS book event contract  ← matches the math package
 │   │   ├── emitterEvents.ts      # component-facing events
 │   │   ├── shotEngine.ts         # ★ outcome → declarative animation Timeline + sampler
+│   │   ├── preShot.ts            # pure aim/power input model (tested)
 │   │   └── bookEventHandlerMap.ts# bookEvent → emitterEvents (the SDK pipeline glue)
 │   ├── components/               # Svelte 5 + pixi-svelte (builds in the monorepo only)
 │   │   ├── Game.svelte           # root: club/aim/power UI → stateBet.playRound(mode)
@@ -51,6 +52,7 @@ cd apps/plug-golf
 npm install            # dev-only: typescript + @types/node
 npm run check          # tsc --noEmit over game/ + stories/ + test/  → passes
 npm run test:engine    # node --experimental-strip-types test  → all tiers pass
+node --experimental-strip-types test/preShot.test.ts   # aim/power input model
 ```
 
 `test:engine` builds a timeline for every tier × club and asserts: it opens at
@@ -68,12 +70,16 @@ web-sdk checkout — they are written to the documented API and the reference
 1. Clone the SDK: `git clone https://github.com/StakeEngine/web-sdk && cd web-sdk`
 2. Copy this app in: `cp -r <this>/apps/plug-golf apps/plug-golf`
 3. `pnpm install` at the root (wires the workspace packages).
-4. Reconcile two integration seams against the current `apps/lines` reference,
+4. Reconcile the integration seams against the current `apps/lines` reference,
    since exact context keys/APIs can drift between SDK versions:
    - **context keys** in `GolfScene.svelte` (`eventEmitter`, `onTick`, `playSfx`,
      `playFx`) — match them to what `state-shared` actually provides.
-   - **`stateBet.playRound({ mode })`** in `Game.svelte` — match the real
-     `state-bet` API for triggering `wallet/play` with a mode.
+   - **`stateBet.playRound({ mode, ctx })`** in `Game.svelte` — match the real
+     `state-bet` API for triggering `wallet/play` with a mode, **and thread `ctx`
+     (the player's `aim` + swing `quality`) into the `bookEventHandlerMap`
+     context** so the shot animation is biased toward the aim. If the SDK doesn't
+     pass a per-round ctx, the handler falls back to centre-aim — still correct,
+     just less "responsive".
    - Note: source imports use explicit `.ts` extensions (type-strip / Vite
      friendly). If the SDK's shared tsconfig lacks `allowImportingTsExtensions`,
      drop the extensions — the code is otherwise unchanged.
