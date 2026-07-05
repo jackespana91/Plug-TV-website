@@ -18,8 +18,10 @@
   #hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:7px;padding:11px 12px 22px;z-index:9;pointer-events:none;
        background:linear-gradient(to bottom,rgba(4,7,5,.55),rgba(4,7,5,0))}
   #hud .logo{font-weight:900;font-style:italic;letter-spacing:.3px;font-size:15px;color:var(--plug);
-             text-shadow:0 1px 0 rgba(0,0,0,.5),0 0 14px rgba(57,255,122,.5)}
+             text-shadow:0 1px 0 rgba(0,0,0,.5),0 0 14px rgba(57,255,122,.5);display:flex;align-items:center;gap:6px}
   #hud .logo span{color:#fff}
+  .logoMark{width:22px;height:22px;filter:drop-shadow(0 0 6px rgba(57,255,122,.4))}
+  .ico{width:15px;height:15px;vertical-align:middle}
   #hud .spacer{flex:1}
   .pill{pointer-events:auto;position:relative;background:linear-gradient(180deg,rgba(32,42,36,.92),rgba(12,17,14,.92));
         border:1px solid rgba(120,150,132,.22);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;
@@ -82,6 +84,7 @@
   #intro .big{font-size:42px;font-weight:900;font-style:italic;letter-spacing:1px;color:var(--plug);
               text-shadow:0 0 24px rgba(57,255,122,.55);animation:introPop .7s cubic-bezier(.2,1.3,.4,1)}
   #intro .big span{color:#fff}
+  .introMark{width:76px;height:76px;margin-bottom:14px;filter:drop-shadow(0 0 18px rgba(57,255,122,.5));animation:introPop .7s cubic-bezier(.2,1.3,.4,1)}
   #intro .tl{margin-top:6px;color:var(--dim);font-size:12px;font-weight:700;letter-spacing:3px}
   #intro.gone{display:none}
   @keyframes introPop{0%{opacity:0;transform:scale(.6) rotate(-4deg)}60%{opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
@@ -132,6 +135,7 @@
   #result .card::after{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:180px;height:120px;
                        background:radial-gradient(closest-side,var(--accent,var(--plug)),transparent);opacity:.14;pointer-events:none}
   @keyframes rez{from{opacity:0;transform:translateY(18px) scale(.93)}to{opacity:1}}
+  .rTrophy{width:62px;height:62px;margin:-6px auto 4px;display:block;filter:drop-shadow(0 6px 14px rgba(224,169,39,.4));animation:introPop .6s cubic-bezier(.2,1.3,.4,1)}
   #result .tag{font-size:11px;font-weight:800;letter-spacing:2.5px;color:var(--dim);text-transform:uppercase}
   #result .mult{font-size:48px;font-weight:900;font-style:italic;margin:2px 0;color:var(--txt);letter-spacing:-1px}
   #result .mult.win{color:var(--plug);text-shadow:0 0 26px rgba(57,255,122,.5)}
@@ -177,11 +181,11 @@
     <div id="vign"></div>
 
     <div id="hud">
-      <div class="logo">PLUG<span>GOLF</span></div>
+      <div class="logo"><img id="logoMark" class="logoMark" alt="">PLUG<span>GOLF</span></div>
       <button id="avatar" class="pill"><span id="avFace">😎</span> <b id="avName">Drip</b></button>
       <div class="spacer"></div>
       <div class="pill" id="betPill"><button id="betDn">–</button> BET <b id="betV">1.00</b> <button id="betUp">+</button></div>
-      <div class="pill">💰 <b id="balV">1000.00</b></div>
+      <div class="pill"><img id="coinIco" class="ico" alt="">&nbsp;<b id="balV">1000.00</b></div>
       <button id="mute">🔊</button>
     </div>
 
@@ -212,6 +216,7 @@
 
     <div id="result" class="hidden">
       <div class="card">
+        <img id="rTrophy" class="rTrophy hidden" alt="">
         <div class="tag" id="rTag">RESULT</div>
         <div class="mult" id="rMult">1x</div>
         <div class="pay" id="rPay"></div>
@@ -226,7 +231,7 @@
     </div>
     <div id="foot">Prototype · RTP 96.0% all modes · outcome is drawn by RNG at the moment you release — aim &amp; meter are presentation only</div>
 
-    <div id="intro"><div class="big">PLUG<span>GOLF</span></div><div class="tl">WHERE THE NEXT WAVE BREAKS</div></div>
+    <div id="intro"><img id="introMark" class="introMark" alt=""><div class="big">PLUG<span>GOLF</span></div><div class="tl">WHERE THE NEXT WAVE BREAKS</div></div>
   </div>
 </div>
 
@@ -326,6 +331,40 @@ const CHARACTERS = [
 function curChar(){ return CHARACTERS[S.character] || CHARACTERS[0]; }
 function loadChar(){ try{ const i=CHARACTERS.findIndex(c=>c.id===localStorage.getItem('plugChar')); return i<0?0:i; }catch(e){ return 0; } }
 function saveChar(){ try{ localStorage.setItem('plugChar', curChar().id); }catch(e){} }
+
+/* ---------- asset system ----------
+   Every visual slot loads from ASSET_SVG here; the renderer uses the loaded
+   image when present and falls back to procedural drawing when it isn't. This
+   is the swap point for production art: replace a slot's SVG (or point it at a
+   PNG data-URI / file) and it drops straight in. Specs are in DESIGN.md §9. */
+const ASSET_SVG = {
+  ball:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><defs><radialGradient id='g' cx='38%' cy='32%' r='72%'><stop offset='0' stop-color='#fff'/><stop offset='.72' stop-color='#eef1ef'/><stop offset='1' stop-color='#b3beb7'/></radialGradient></defs><circle cx='24' cy='24' r='22' fill='url(#g)'/><g fill='#c4cdc6' opacity='.5'><circle cx='24' cy='14' r='1.9'/><circle cx='31' cy='18' r='1.9'/><circle cx='17' cy='18' r='1.9'/><circle cx='24' cy='24' r='1.9'/><circle cx='31' cy='30' r='1.9'/><circle cx='17' cy='30' r='1.9'/><circle cx='24' cy='34' r='1.9'/><circle cx='37' cy='24' r='1.9'/><circle cx='11' cy='24' r='1.9'/></g><circle cx='16' cy='15' r='4.5' fill='#fff' opacity='.85'/></svg>`,
+  coin:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='c' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#ffe07a'/><stop offset='1' stop-color='#e3a326'/></linearGradient></defs><circle cx='16' cy='16' r='14' fill='url(#c)' stroke='#c98f22' stroke-width='2'/><circle cx='16' cy='16' r='9' fill='none' stroke='#fff4cf' stroke-width='1.4' opacity='.7'/><path d='M16 9l1.6 5H23l-4.4 3 1.6 5-4.2-3-4.2 3 1.6-5L9 14h5.4z' fill='#fff6d8'/></svg>`,
+  trophy:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='t' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#ffe98f'/><stop offset='1' stop-color='#dca027'/></linearGradient></defs><path d='M14 14C4 14 5 30 20 33' fill='none' stroke='#dca027' stroke-width='4'/><path d='M50 14c10 0 9 16-6 19' fill='none' stroke='#dca027' stroke-width='4'/><path d='M15 10h34v12a17 15 0 0 1-34 0z' fill='url(#t)'/><path d='M32 30v12' stroke='#c98f22' stroke-width='6'/><rect x='21' y='42' width='22' height='6' rx='2' fill='#c98f22'/><rect x='16' y='48' width='32' height='8' rx='3' fill='url(#t)'/><path d='M32 13l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z' fill='#fff6d8'/></svg>`,
+  logo:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><circle cx='20' cy='20' r='18.5' fill='#0c2a16' stroke='#39ff7a' stroke-width='2'/><circle cx='20' cy='27' r='2.6' fill='#071c0f' stroke='#39ff7a' stroke-width='1.3'/><path d='M20 25V8' stroke='#eef3f0' stroke-width='2'/><path d='M20 8l11 3-11 4z' fill='#39ff7a'/></svg>`
+};
+/* Production art swap point: set ASSET_SRC[id] to a file/URL (e.g. a PNG sprite
+   from a designer, 'assets/ball.png') and it overrides the inline SVG below —
+   no other code changes. Anything not overridden uses the vector placeholder. */
+const ASSET_SRC={ /* ball:'assets/ball.png', trophy:'assets/trophy.png', … */ };
+const ASSETS={};
+function assetURI(id){
+  return ASSET_SRC[id] || 'data:image/svg+xml;charset=utf8,'+encodeURIComponent(ASSET_SVG[id]);
+}
+(function loadAssets(){
+  for(const id in ASSET_SVG){
+    const im=new Image();
+    im.onload=(function(k,i){ return ()=>{ ASSETS[k]=i; }; })(id,im);
+    im.src=assetURI(id);
+  }
+})();
+function img(id){ return ASSETS[id]||null; }
+/* point the HTML <img> slots at their asset URIs once the DOM is ready */
+function wireAssetImgs(){
+  const set=(elId,asset)=>{ const e=document.getElementById(elId); if(e) e.src=assetURI(asset); };
+  set('logoMark','logo'); set('introMark','logo'); set('coinIco','coin'); set('rTrophy','trophy');
+}
+wireAssetImgs();
 
 /* ---------- state ---------- */
 const S = {
@@ -974,6 +1013,7 @@ function showResult(){
   else cel.style.display='none';
   if(o.mult>=2){ confetti(o.mult>=10?70:38, [ch.color, ch.trail, '#ffffff']); }
   $('rReplay').classList.toggle('hidden', o.mult<10);
+  $('rTrophy').classList.toggle('hidden', o.mult<25);   // trophy on the jackpot
   $('result').classList.remove('hidden');
 }
 $('rReplay').onclick=()=>startReplay(()=>{ S.phase='result'; $('result').classList.remove('hidden'); });
@@ -1298,13 +1338,18 @@ function drawBall(){
   const lift=Math.min(1,b.alt/180);
   cx.fillStyle=`rgba(0,0,0,${0.32-lift*0.18})`;
   cx.beginPath(); cx.ellipse(b.x+b.alt*.16+3,b.y+5,8.5*sc*(1-lift*0.35),4.6*sc*(1-lift*0.3),0,0,7); cx.fill();
-  // ball with a soft rim + specular highlight
-  const grad=cx.createRadialGradient(b.x-3.2*sc,by-3.2*sc,1,b.x,by,9.5*sc);
-  grad.addColorStop(0,'#ffffff'); grad.addColorStop(.7,'#eef1ef'); grad.addColorStop(1,'#aeb9b2');
-  cx.fillStyle=grad;
-  cx.beginPath(); cx.arc(b.x,by,8.4*sc,0,7); cx.fill();
-  cx.fillStyle='rgba(255,255,255,.9)';
-  cx.beginPath(); cx.arc(b.x-2.6*sc,by-3*sc,2.2*sc,0,7); cx.fill();
+  // ball — art asset if loaded, else procedural gradient + specular
+  const bi=img('ball'), rad=9.2*sc;
+  if(bi){
+    cx.drawImage(bi, b.x-rad, by-rad, rad*2, rad*2);
+  }else{
+    const grad=cx.createRadialGradient(b.x-3.2*sc,by-3.2*sc,1,b.x,by,9.5*sc);
+    grad.addColorStop(0,'#ffffff'); grad.addColorStop(.7,'#eef1ef'); grad.addColorStop(1,'#aeb9b2');
+    cx.fillStyle=grad;
+    cx.beginPath(); cx.arc(b.x,by,8.4*sc,0,7); cx.fill();
+    cx.fillStyle='rgba(255,255,255,.9)';
+    cx.beginPath(); cx.arc(b.x-2.6*sc,by-3*sc,2.2*sc,0,7); cx.fill();
+  }
   if(moving || WEATHER[S.weather].name==='Night'){
     cx.strokeStyle=ch.trail; cx.globalAlpha=.6; cx.lineWidth=2;
     cx.beginPath(); cx.arc(b.x,by,10*sc,0,7); cx.stroke(); cx.globalAlpha=1;

@@ -282,3 +282,43 @@ dependencies, works on mobile (touch) and desktop (mouse). Fun-credit balance on
 
 Debug hooks: `window.__plug.autoShot('driver', 10)` plays an automated fast round
 and resolves with the outcome; `window.__plug.CFG` exposes the live paytables.
+
+## 9. Visual assets (swap point for production art)
+
+Everything renders procedurally (canvas shapes, gradients, emoji) so the game runs
+as a single self-contained file, but the polished/branded pieces now come through
+an **asset system** built for drop-in replacement before Stake upload.
+
+**How it works.** `ASSET_SVG` in `index.html` holds an inline vector placeholder
+per slot; the renderer uses the loaded image where present and falls back to
+procedural drawing if a slot is missing, so nothing can break. To ship production
+art, set `ASSET_SRC[id] = 'assets/<file>.png'` (a designer's sprite, or an
+AI-generated image) — it overrides that slot with **no other code change**.
+
+**Slots live now** (vector placeholders in place, swap-ready):
+
+| id | used for | render size | spec for production art |
+|---|---|---|---|
+| `ball` | the golf ball, every frame | ~18 px (scales with height) | 96×96 PNG, transparent, centred, top-left light, soft dimples |
+| `logo` | HUD + intro emblem | 22 / 76 px | 256×256, transparent, works on dark, green/`#39ff7a` key |
+| `coin` | balance pill | 15 px | 64×64, transparent, gold |
+| `trophy` | jackpot result card | 62 px | 256×256, transparent, gold, celebratory |
+
+**Highest-impact slots to add next** (currently procedural; recommend commissioning
+or generating, then registering new ids the same way):
+
+- **Golfer sprites** — the mascots are procedurally drawn. Production art wants a
+  per-character sprite set with **swing frames** (address → top → impact → follow)
+  and **celebration** poses, ~512 px tall, transparent, matching each character's
+  accent colour. This is the single biggest visual upgrade.
+- **Course / island** — the island green, water, bunkers, shore. Either a painted
+  background plate (portrait, ~1080×1920 safe) or a tile/atlas set; keep the pin,
+  hole, and green centred on the existing geometry (see `GREEN`, `RADII`).
+- **Flag, bunkers rim, lily pads, rocks, trees** — small transparent sprites to
+  replace the procedural decorations.
+- **UI chrome** — pill/panel frames, button skins, the wind dial.
+
+All art is cosmetic and **must not encode outcome** — the tier the RGS returns
+drives which animation plays, never the art. Keep sizes/anchors as above so drops
+are 1:1. In the web-sdk build these same slots become Pixi textures/sprite sheets;
+the ids and specs carry over.
