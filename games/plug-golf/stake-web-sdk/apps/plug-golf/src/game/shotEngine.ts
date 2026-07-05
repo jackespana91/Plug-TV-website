@@ -26,8 +26,12 @@ export type Cue =
   | { at: CueWhen; kind: 'camera'; mode: 'tee' | 'track' | 'land' | 'wide' }
   | { at: CueWhen; kind: 'vignette'; on: boolean };
 
+/** Sound palette (IDs the component's playSfx maps to synthesised voices; the
+ *  canvas prototype in games/plug-golf/index.html is the reference synth).
+ *  'swing' fires on release and 'stinger' on the win celebration — both outside
+ *  the timeline — but are part of the same palette. */
 export type SfxId =
-  | 'hit' | 'bounce' | 'splash' | 'crowdOoh' | 'crowdWin' | 'drop' | 'lip' | 'fanfare';
+  | 'swing' | 'hit' | 'bounce' | 'splash' | 'crowdOoh' | 'crowdWin' | 'drop' | 'lip' | 'fanfare' | 'stinger';
 
 export type Segment =
   | { type: 'flight'; from: Vec; to: Vec; height: number; dur: number; curve: number; cues: Cue[] }

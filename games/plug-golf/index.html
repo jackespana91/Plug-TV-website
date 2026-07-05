@@ -361,38 +361,123 @@ function tierFor(m){
   return 'holeIn';
 }
 
-/* ---------- tiny synth audio ---------- */
-let AC=null;
-function ac(){ if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); return AC; }
-function tone(f,d,type,g,slide){
-  if(S.muted) return;
+/* ---------- synth audio engine ----------
+   Everything is synthesised through a master bus (soft-compressed for glue).
+   Sounds are layered voices with real envelopes + filter sweeps, so a strike
+   is a click + a "tok" + a low thump rather than a single beep. All
+   self-contained — no audio files, no network. */
+let AC=null, MASTER=null, _nbuf=null;
+function ac(){
+  if(!AC){
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+    MASTER = AC.createGain(); MASTER.gain.value = S.muted?0:0.9;
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value=-14; comp.knee.value=24; comp.ratio.value=3; comp.attack.value=.003; comp.release.value=.25;
+    MASTER.connect(comp).connect(AC.destination);
+  }
+  return AC;
+}
+function nowT(){ return ac().currentTime; }
+function noiseBuf(){ // 1s reusable white-noise buffer
+  if(_nbuf) return _nbuf;
+  const a=ac(), n=a.sampleRate, b=a.createBuffer(1,n,a.sampleRate), ch=b.getChannelData(0);
+  for(let i=0;i<n;i++) ch[i]=Math.random()*2-1;
+  return _nbuf=b;
+}
+function envg(g,peak,atk,dec,t0){
+  g.gain.setValueAtTime(.0001,t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak), t0+atk);
+  g.gain.exponentialRampToValueAtTime(.0001, t0+atk+dec);
+}
+function osc(o){ // {type,f,f2,t0,dur,peak,atk,detune,dest}
+  const a=ac(), n=a.createOscillator(), g=a.createGain();
+  n.type=o.type||'sine'; n.frequency.setValueAtTime(o.f, o.t0);
+  if(o.detune) n.detune.value=o.detune;
+  if(o.f2) n.frequency.exponentialRampToValueAtTime(Math.max(1,o.f2), o.t0+o.dur);
+  envg(g, o.peak==null?.12:o.peak, o.atk||.004, o.dur-(o.atk||.004), o.t0);
+  n.connect(g).connect(o.dest||MASTER); n.start(o.t0); n.stop(o.t0+o.dur+.03);
+  return n;
+}
+function nz(o){ // filtered noise {dur,peak,t0,type,f,f2,q,atk,dest}
+  const a=ac(), src=a.createBufferSource(); src.buffer=noiseBuf(); src.loop=true;
+  const flt=a.createBiquadFilter(); flt.type=o.type||'lowpass'; flt.frequency.setValueAtTime(o.f||900,o.t0); flt.Q.value=o.q||.7;
+  if(o.f2) flt.frequency.exponentialRampToValueAtTime(Math.max(20,o.f2), o.t0+o.dur);
+  const g=a.createGain(); envg(g, o.peak==null?.12:o.peak, o.atk||.005, o.dur-(o.atk||.005), o.t0);
+  src.connect(flt).connect(g).connect(o.dest||MASTER); src.start(o.t0); src.stop(o.t0+o.dur+.03);
+}
+function guard(fn){ if(S.muted){ return; } try{ ac(); fn(nowT()); }catch(e){} }
+/* compatibility wrappers (UI clicks etc. still call tone/noise) */
+function tone(f,d,type,g,slide){ guard(t=>osc({type,f,f2:slide,t0:t,dur:d,peak:g==null?.12:g})); }
+function noise(d,g,lp){ guard(t=>nz({dur:d,peak:g==null?.14:g,t0:t,f:lp||900})); }
+
+/* --- rich SFX (layered voices) --- */
+const sSwing =()=>guard(t=>{ nz({dur:.2,peak:.06,t0:t,type:'bandpass',f:500,f2:1700,q:1.2,atk:.03}); });
+const sHit   =()=>guard(t=>{                        // driver crack: click + tok + thump
+  nz({dur:.05,peak:.20,t0:t,type:'highpass',f:2200,atk:.001});
+  osc({type:'triangle',f:900,f2:180,t0:t,dur:.09,peak:.15});
+  osc({type:'sine',f:130,f2:60,t0:t,dur:.13,peak:.13});
+});
+const sBounce=()=>guard(t=>{ osc({type:'sine',f:250,f2:110,t0:t,dur:.12,peak:.09}); nz({dur:.05,peak:.035,t0:t,type:'lowpass',f:600}); });
+const sSplash=()=>guard(t=>{                         // water: whoosh drop + bloop + bubbles
+  nz({dur:.42,peak:.16,t0:t,type:'lowpass',f:1500,f2:280,atk:.006});
+  osc({type:'sine',f:520,f2:120,t0:t,dur:.26,peak:.08});
+  for(let i=0;i<4;i++){ const tt=t+.04+Math.random()*.28; osc({type:'sine',f:300+Math.random()*380,f2:180,t0:tt,dur:.06,peak:.04}); }
+});
+const sLip   =()=>guard(t=>{ nz({dur:.05,peak:.06,t0:t,type:'bandpass',f:520,q:3}); osc({type:'sine',f:520,f2:430,t0:t,dur:.05,peak:.04}); });
+const sDrop  =()=>guard(t=>{                         // cup plunk: hollow pock + rim click + thump
+  osc({type:'sine',f:720,f2:280,t0:t,dur:.13,peak:.17});
+  nz({dur:.04,peak:.06,t0:t,type:'bandpass',f:1300,q:2});
+  osc({type:'sine',f:150,f2:80,t0:t+.02,dur:.16,peak:.10});
+});
+const sCrowdO=()=>guard(t=>{                          // "ooh" groan swell
+  nz({dur:.7,peak:.11,t0:t,type:'bandpass',f:430,f2:520,q:.8,atk:.15});
+  nz({dur:.7,peak:.06,t0:t,type:'lowpass',f:820,atk:.13});
+});
+const sCrowdW=()=>guard(t=>{                          // cheer roar + whistles
+  nz({dur:1.2,peak:.16,t0:t,type:'bandpass',f:800,f2:1500,q:.6,atk:.1});
+  nz({dur:1.2,peak:.10,t0:t,type:'lowpass',f:1700,atk:.16});
+  osc({type:'sine',f:1700,f2:2500,t0:t+.12,dur:.16,peak:.04});
+  osc({type:'sine',f:2100,f2:1500,t0:t+.34,dur:.18,peak:.035});
+});
+function brass(f,tt,dur,peak){
+  osc({type:'sawtooth',f,t0:tt,dur,peak:peak*.6,detune:-6});
+  osc({type:'sawtooth',f,t0:tt,dur,peak:peak*.6,detune:7});
+  osc({type:'triangle',f:f*2,t0:tt,dur,peak:peak*.25});
+}
+const sFanfare=()=>guard(t=>{                         // triumphant brass arpeggio → chord
+  const notes=[523.25,659.25,783.99,1046.5];
+  notes.forEach((f,i)=>brass(f, t+i*.11, .5, i===3?.15:.11));
+  [523.25,659.25,783.99,1046.5].forEach(f=>brass(f, t+.46, .8, .06));
+});
+const sStinger=()=>guard(t=>{                         // celebration hit: cymbal crash + boom
+  nz({dur:.9,peak:.11,t0:t,type:'highpass',f:5200,atk:.002});
+  osc({type:'sine',f:92,f2:48,t0:t,dur:.5,peak:.15});
+});
+
+/* --- ambient bed: soft wind + occasional birds during setup --- */
+let ambient=null;
+function startAmbient(){
+  if(ambient||S.muted) return;
   try{
-    const a=ac(), o=a.createOscillator(), v=a.createGain();
-    o.type=type||'sine'; o.frequency.value=f;
-    if(slide) o.frequency.exponentialRampToValueAtTime(slide, a.currentTime+d);
-    v.gain.value=g||.12; v.gain.exponentialRampToValueAtTime(.0001, a.currentTime+d);
-    o.connect(v).connect(a.destination); o.start(); o.stop(a.currentTime+d);
+    const a=ac(), src=a.createBufferSource(); src.buffer=noiseBuf(); src.loop=true;
+    const flt=a.createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=430;
+    const g=a.createGain(); g.gain.value=.02;
+    const lfo=a.createOscillator(); lfo.frequency.value=.12; const lg=a.createGain(); lg.gain.value=.013;
+    lfo.connect(lg).connect(g.gain);
+    src.connect(flt).connect(g).connect(MASTER); src.start(); lfo.start();
+    ambient={g}; scheduleBird();
   }catch(e){}
 }
-function noise(d,g,lp){
-  if(S.muted) return;
-  try{
-    const a=ac(), n=a.sampleRate*d, buf=a.createBuffer(1,n,a.sampleRate), ch=buf.getChannelData(0);
-    for(let i=0;i<n;i++) ch[i]=(Math.random()*2-1)*(1-i/n);
-    const src=a.createBufferSource(); src.buffer=buf;
-    const v=a.createGain(); v.gain.value=g||.14;
-    const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=lp||900;
-    src.connect(f).connect(v).connect(a.destination); src.start();
-  }catch(e){}
+function ambientLevel(v){ if(ambient) try{ ambient.g.gain.setTargetAtTime(v, nowT(), .4); }catch(e){} }
+function scheduleBird(){
+  setTimeout(()=>{
+    if(!ambient) return;
+    if(!S.muted && (S.phase==='aim'||S.phase==='club'||S.phase==='power')){
+      guard(t=>{ const f=1900+Math.random()*900; osc({type:'sine',f,f2:f*1.15,t0:t,dur:.07,peak:.03}); osc({type:'sine',f:f*1.02,f2:f*.9,t0:t+.09,dur:.06,peak:.025}); });
+    }
+    scheduleBird();
+  }, 3500+Math.random()*5000);
 }
-const sHit    =()=>{ tone(190,.09,'square',.08); noise(.06,.06,2500); };
-const sBounce =()=>  tone(300,.06,'sine',.06,180);
-const sSplash =()=>  noise(.5,.2,700);
-const sCrowdO =()=>  noise(.7,.12,500);
-const sCrowdW =()=>{ noise(1.1,.22,900); tone(520,.5,'triangle',.05,780); };
-const sDrop   =()=>{ tone(680,.12,'sine',.14); setTimeout(()=>tone(920,.25,'sine',.12),90); };
-const sLip    =()=>  tone(430,.05,'sine',.05);
-const sFanfare=()=>{ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.32,'triangle',.13),i*120)); };
 
 /* ---------- ui helpers ---------- */
 const $ = id=>document.getElementById(id);
@@ -409,7 +494,9 @@ function refreshHud(){ $('betV').textContent=fmt(S.bet); $('balV').textContent=f
 
 $('betUp').onclick=()=>{ if(S.phase!=='flight'){ S.betI=Math.min(S.betSteps.length-1,S.betI+1); S.bet=S.betSteps[S.betI]; refreshHud(); tone(600,.05,'sine',.05);} };
 $('betDn').onclick=()=>{ if(S.phase!=='flight'){ S.betI=Math.max(0,S.betI-1); S.bet=S.betSteps[S.betI]; refreshHud(); tone(400,.05,'sine',.05);} };
-$('mute').onclick =()=>{ S.muted=!S.muted; $('mute').textContent=S.muted?'🔇':'🔊'; };
+$('mute').onclick =()=>{ S.muted=!S.muted; $('mute').textContent=S.muted?'🔇':'🔊';
+  if(MASTER) try{ MASTER.gain.setTargetAtTime(S.muted?0:0.9, nowT(), .05); }catch(e){}
+  if(!S.muted) startAmbient(); };
 
 /* club cards */
 (function buildClubs(){
@@ -545,7 +632,7 @@ async function swing(){
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
   S.swingT=0; S.swungImpact=false;                           // golfer swings; impact fires the strike
   cutTo('tee');                                              // broadcast: tee cam
-  prompt('');
+  prompt(''); sSwing();
   if(S.quality>0.92) caption('PURE STRIKE!','pop');
 }
 
@@ -899,7 +986,7 @@ function evPos(e){
   return {x:(sx-W/2)/S.cam.z+S.cam.x, y:(sy-AY)/S.cam.z+S.cam.y};
 }
 cv.addEventListener('pointerdown',e=>{
-  ac(); const p=evPos(e); cv.setPointerCapture(e.pointerId);
+  ac(); startAmbient(); const p=evPos(e); cv.setPointerCapture(e.pointerId);
   if(S.phase==='replay'){ S.replayT=S.replayEnd; return; }   // tap to skip replay
   if(S.phase==='aim'){ S.drag='aim'; setAim(p); }
   else if(S.phase==='power' && dist(p,{x:TEE.x,y:TEE.y})<90){ S.drag='power'; S.pull=0; }
@@ -1183,7 +1270,7 @@ function impactFx(){
   S.particles.push({type:'ring',world:true,x:TEE.x,y:TEE.y-6,age:0,life:.35,size:5,color:'rgba(230,220,190,.7)'});
 }
 function startCelebration(char,done){
-  shake(5,0.4);
+  shake(5,0.4); sStinger();
   S.celebrate={char, t:0, dur:1.5, done};
   // themed emoji burst
   for(let i=0;i<16;i++){ const a=-Math.PI/2+spread_(0.9), v=120+Math.random()*160;
@@ -1321,6 +1408,8 @@ function frame(now){
     if(S.swingT>0.8) S.swingT=null;
   }
   if(S.celebrate){ S.celebrate.t+=dt; if(S.celebrate.t>=S.celebrate.dur){ const d=S.celebrate.done; S.celebrate=null; d&&d(); } }
+  const amb=(S.phase==='aim'||S.phase==='club'||S.phase==='power')?0.02:0.006;   // duck wind during the action
+  if(amb!==S._amb){ S._amb=amb; ambientLevel(amb); }
   updateCam(dt);
   // screen-shake offset (decays over its duration)
   let shx=0,shy=0;
