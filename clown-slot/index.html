@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Killer Klown Cash — Slots</title>
+<style>
+  :root{
+    --blood:#c1121f;
+    --darkblood:#5c0a12;
+    --gold:#ffd166;
+    --deepgold:#b8860b;
+    --night:#0b0508;
+    --panel:#160a0e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Arial Black',Arial,sans-serif;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% -10%, #3a0a12 0%, transparent 60%),
+      radial-gradient(ellipse 80% 50% at 15% 30%, #2a060c 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 85% 40%, #240509 0%, transparent 70%),
+      var(--night);
+    color:#fff;
+    overflow:hidden;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    user-select:none;
+  }
+  #game{
+    width:min(100vw, 62vh);
+    height:100vh;
+    max-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* ---------- Jackpot bar ---------- */
+  #jackpots{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:4px;
+    padding:6px 6px 2px;
+    z-index:5;
+  }
+  .jp{
+    border-radius:10px;
+    padding:3px 6px 5px;
+    text-align:center;
+    border:2px solid;
+    background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.45));
+    box-shadow:0 0 12px rgba(0,0,0,.8), inset 0 0 8px rgba(0,0,0,.6);
+  }
+  .jp .name{
+    font-size:clamp(12px,2.4vh,18px);
+    font-weight:900;
+    letter-spacing:1px;
+    -webkit-text-stroke:.5px #000;
+  }
+  .jp .val{
+    font-size:clamp(11px,2vh,16px);
+    font-weight:bold;
+    color:#fff;
+    text-shadow:0 0 6px currentColor;
+    font-variant-numeric:tabular-nums;
+  }
+  .jp.grand{border-color:#ff2d55;}
+  .jp.grand .name{color:#ff4d6d;text-shadow:0 0 10px #ff2d55;}
+  .jp.major{border-color:#c77dff;}
+  .jp.major .name{color:#c77dff;text-shadow:0 0 10px #9d4edd;}
+  .jp.minor{border-color:#48cae4;}
+  .jp.minor .name{color:#48cae4;text-shadow:0 0 10px #0096c7;}
+  .jp.mini{border-color:#80ed99;}
+  .jp.mini .name{color:#80ed99;text-shadow:0 0 10px #38b000;}
+
+  /* ---------- Clown header ---------- */
+  #clownStage{
+    flex:0 0 auto;
+    height:20vh;
+    min-height:110px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+    position:relative;
+    overflow:visible;
+    z-index:2;
+  }
+  #clown{
+    height:130%;
+    filter:drop-shadow(0 0 18px rgba(193,18,31,.65));
+    animation:clownSway 5s ease-in-out infinite;
+    transform-origin:50% 100%;
+  }
+  @keyframes clownSway{
+    0%,100%{transform:rotate(-2deg) translateY(2%);}
+    50%{transform:rotate(2deg) translateY(0);}
+  }
+  #clownStage::after{ /* battlement wall the clown looms over */
+    content:"";
+    position:absolute;
+    bottom:-2px;left:0;right:0;height:16px;
+    background:
+      repeating-linear-gradient(90deg, #5c0a12 0 22px, transparent 22px 34px),
+      linear-gradient(180deg,#7a1220,#3a060c);
+    box-shadow:0 4px 10px rgba(0,0,0,.9);
+    z-index:3;
+  }
+
+  /* ---------- Reels ---------- */
+  #reelWrap{
+    flex:1 1 auto;
+    min-height:0;
+    padding:8px 6px;
+    position:relative;
+    z-index:4;
+  }
+  #reelFrame{
+    height:100%;
+    border:3px solid var(--deepgold);
+    border-radius:8px;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,.02) 0 2px, transparent 2px 9px),
+      linear-gradient(180deg, #1d0509 0%, #12030a 50%, #1d0509 100%);
+    box-shadow:0 0 22px rgba(0,0,0,.9), inset 0 0 30px rgba(92,10,18,.55), 0 0 14px rgba(184,134,11,.35);
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:3px;
+    padding:5px;
+    overflow:hidden;
+  }
+  .reel{
+    display:grid;
+    grid-template-rows:repeat(4,1fr);
+    gap:3px;
+    min-height:0;
+  }
+  .cell{
+    background:linear-gradient(180deg, rgba(122,18,32,.28), rgba(0,0,0,.5));
+    border:1px solid rgba(184,134,11,.35);
+    border-radius:6px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    position:relative;
+    min-height:0;
+    line-height:1;
+  }
+  .reel.spinning .cell{filter:blur(2px);}
+  .reel.spinning{animation:reelJolt .09s linear infinite;}
+  @keyframes reelJolt{
+    0%{transform:translateY(-2px);}
+    50%{transform:translateY(2px);}
+    100%{transform:translateY(-2px);}
+  }
+  .cell.land{animation:land .3s cubic-bezier(.2,2.2,.4,1);}
+  @keyframes land{
+    0%{transform:translateY(-24%);}
+    100%{transform:translateY(0);}
+  }
+  .cell.winHit{
+    animation:winPulse .55s ease-in-out infinite alternate;
+    z-index:2;
+  }
+  @keyframes winPulse{
+    from{box-shadow:0 0 4px 1px var(--gold), inset 0 0 6px rgba(255,209,102,.5);}
+    to{box-shadow:0 0 16px 5px var(--gold), inset 0 0 14px rgba(255,209,102,.9);}
+  }
+
+  .sym{font-size:clamp(18px,4.2vh,42px);}
+  .sym.letter{
+    font-weight:900;
+    color:#e9e3d0;
+    text-shadow:0 2px 0 #6b0f1a, 0 0 8px rgba(193,18,31,.9), 2px 3px 2px rgba(0,0,0,.9);
+    font-size:clamp(20px,4.6vh,46px);
+  }
+  .sym.svgwrap{height:82%;width:82%;display:flex;justify-content:center;align-items:center;}
+  .sym.svgwrap svg{height:100%;width:100%;}
+
+  .coin{
+    width:84%;height:84%;
+    border-radius:50%;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    background:radial-gradient(circle at 35% 30%, #ffe9a8 0%, #f4c430 35%, #b8860b 75%, #7a5a08 100%);
+    border:2px solid #8a6508;
+    box-shadow:inset 0 0 10px rgba(122,18,32,.7), 0 0 10px rgba(244,196,48,.55);
+    color:#7a1220;
+    font-weight:900;
+  }
+  .coin .cv{
+    font-size:clamp(11px,2.2vh,22px);
+    text-shadow:0 1px 0 #ffe9a8;
+    letter-spacing:-.5px;
+  }
+  .coin.jpcoin{background:radial-gradient(circle at 35% 30%, #ffd6e0 0%, #ff2d55 45%, #7a0619 100%);border-color:#ff2d55;color:#fff;}
+  .coin.jpcoin .cv{font-size:clamp(9px,1.7vh,16px);text-shadow:0 0 6px #000;}
+
+  .fg{
+    width:92%;height:92%;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;
+  }
+  .fg .plus{
+    color:#ff3b30;
+    font-size:clamp(16px,3.4vh,34px);
+    font-weight:900;
+    text-shadow:0 0 8px #ff3b30, 0 2px 0 #4d0308, 1px 2px 2px #000;
+  }
+  .fg .lbl{
+    color:var(--gold);
+    font-size:clamp(7px,1.3vh,13px);
+    font-weight:900;
+    letter-spacing:.5px;
+    text-shadow:0 1px 0 #000, 0 0 6px rgba(255,209,102,.8);
+  }
+  .expand{
+    width:92%;height:92%;
+    display:flex;justify-content:center;align-items:center;text-align:center;
+    color:#ff3b30;
+    font-size:clamp(10px,1.9vh,19px);
+    font-weight:900;
+    letter-spacing:.5px;
+    text-shadow:0 0 8px #ff3b30, 0 2px 0 #3d0206, 1px 2px 1px #000;
+    transform:rotate(-4deg);
+  }
+
+  /* ---------- Message / meters / controls ---------- */
+  #msgBar{
+    text-align:center;
+    font-size:clamp(12px,2.2vh,18px);
+    font-weight:900;
+    color:var(--gold);
+    text-shadow:0 0 8px rgba(255,209,102,.7), 0 2px 2px #000;
+    min-height:3vh;
+    padding:2px 8px;
+    z-index:4;
+  }
+  #meters{
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+    padding:2px 8px;
+    z-index:4;
+  }
+  .meter{
+    flex:1;
+    background:linear-gradient(180deg, rgba(0,0,0,.8), rgba(40,4,10,.8));
+    border:1.5px solid var(--deepgold);
+    border-radius:8px;
+    text-align:center;
+    padding:3px 4px 5px;
+  }
+  .meter .mlbl{font-size:clamp(8px,1.4vh,12px);color:#caa64b;font-weight:bold;letter-spacing:1px;}
+  .meter .mval{font-size:clamp(11px,2vh,17px);font-weight:900;color:#fff;font-variant-numeric:tabular-nums;}
+  #winMeter .mval{color:var(--gold);text-shadow:0 0 8px rgba(255,209,102,.9);}
+
+  #controls{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+    z-index:4;
+  }
+  .btn{
+    border:none;
+    cursor:pointer;
+    font-family:inherit;
+    font-weight:900;
+    color:#fff;
+    border-radius:50%;
+    display:flex;justify-content:center;align-items:center;
+    transition:transform .08s, filter .15s;
+  }
+  .btn:active{transform:scale(.93);}
+  .betBtn{
+    width:clamp(34px,6vh,48px);height:clamp(34px,6vh,48px);
+    font-size:clamp(18px,3.2vh,28px);
+    background:radial-gradient(circle at 35% 30%, #9a1b2b, #4d0812);
+    border:2px solid var(--deepgold);
+    box-shadow:0 3px 8px rgba(0,0,0,.8);
+  }
+  #spinBtn{
+    width:clamp(64px,11vh,92px);height:clamp(64px,11vh,92px);
+    font-size:clamp(15px,2.6vh,22px);
+    letter-spacing:1px;
+    background:radial-gradient(circle at 35% 28%, #ff5a4e 0%, #d81f2a 45%, #7a0619 100%);
+    border:3px solid var(--gold);
+    box-shadow:0 0 18px rgba(216,31,42,.8), 0 4px 10px rgba(0,0,0,.9), inset 0 -4px 8px rgba(0,0,0,.45);
+    text-shadow:0 2px 2px rgba(0,0,0,.7);
+  }
+  #spinBtn:disabled{filter:grayscale(.6) brightness(.6);cursor:default;}
+  #spinBtn.autospin{background:radial-gradient(circle at 35% 28%, #80ed99 0%, #2d6a4f 55%, #081c15 100%);}
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    background:rgba(5,1,3,.82);
+    z-index:20;
+    opacity:0;pointer-events:none;
+    transition:opacity .3s;
+    text-align:center;
+    padding:20px;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .bigTitle{
+    font-size:clamp(24px, min(8vh, 10.5vw), 72px);
+    max-width:100%;
+    font-weight:900;
+    letter-spacing:2px;
+    background:linear-gradient(180deg,#fff2c4 10%, var(--gold) 45%, #b8860b 75%, #ffd166 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 14px rgba(255,209,102,.85)) drop-shadow(0 4px 3px rgba(0,0,0,.9));
+    animation:titlePump .7s ease-in-out infinite alternate;
+  }
+  .bigTitle.blood{
+    background:linear-gradient(180deg,#ff8a80 5%, #ff2d55 40%, #7a0619 80%, #ff2d55 100%);
+    -webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 0 16px rgba(255,45,85,.9)) drop-shadow(0 4px 3px rgba(0,0,0,.9));
+  }
+  @keyframes titlePump{from{transform:scale(1);}to{transform:scale(1.07);}}
+  .bigAmount{
+    margin-top:2vh;
+    font-size:clamp(26px,5.6vh,52px);
+    font-weight:900;
+    color:#fff;
+    text-shadow:0 0 14px var(--gold), 0 3px 2px #000;
+    font-variant-numeric:tabular-nums;
+  }
+  .overlaySub{
+    margin-top:2.4vh;
+    font-size:clamp(13px,2.4vh,19px);
+    color:#e9e3d0;
+    font-weight:bold;
+  }
+  .overlayBtn{
+    margin-top:3vh;
+    padding:12px 34px;
+    border-radius:999px;
+    border:2px solid var(--gold);
+    background:linear-gradient(180deg,#d81f2a,#7a0619);
+    color:#fff;font-weight:900;font-size:clamp(14px,2.4vh,20px);
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow:0 0 16px rgba(216,31,42,.8);
+    letter-spacing:1px;
+  }
+  .fgChoices{display:flex;gap:14px;margin-top:3vh;flex-wrap:wrap;justify-content:center;}
+  .fgCard{
+    width:clamp(84px,16vh,120px);
+    padding:14px 6px;
+    border-radius:12px;
+    border:2px solid var(--deepgold);
+    background:linear-gradient(180deg,#2a060c,#0b0205);
+    cursor:pointer;
+    transition:transform .12s;
+  }
+  .fgCard:hover{transform:scale(1.06);border-color:var(--gold);}
+  .fgCard .q{font-size:clamp(30px,6vh,52px);color:var(--blood);font-weight:900;text-shadow:0 0 10px rgba(193,18,31,.9);}
+  .fgCard .t{font-size:clamp(9px,1.6vh,13px);color:var(--gold);font-weight:900;margin-top:6px;letter-spacing:.5px;}
+
+  #shaker{position:absolute;inset:0;display:flex;flex-direction:column;}
+  #game.shake #shaker{animation:shake .45s linear;}
+  @keyframes shake{
+    0%,100%{transform:translate(0,0);}
+    20%{transform:translate(-7px,4px);}
+    40%{transform:translate(6px,-5px);}
+    60%{transform:translate(-5px,-4px);}
+    80%{transform:translate(5px,5px);}
+  }
+
+  /* particles */
+  .part{
+    position:absolute;
+    width:10px;height:10px;
+    border-radius:50%;
+    pointer-events:none;
+    z-index:30;
+  }
+
+  #muteBtn{
+    position:absolute;top:6px;right:8px;z-index:25;
+    width:34px;height:34px;border-radius:50%;
+    background:rgba(0,0,0,.55);border:1.5px solid var(--deepgold);
+    color:var(--gold);font-size:16px;cursor:pointer;
+  }
+  #disclaimer{
+    position:absolute;bottom:1px;left:0;right:0;
+    text-align:center;font-size:9px;color:#9c8064;z-index:6;
+    font-family:Arial,sans-serif;font-weight:normal;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="shaker">
+    <div id="jackpots">
+      <div class="jp grand"><div class="name">GRAND</div><div class="val" id="jpGrand">303,979,731,556</div></div>
+      <div class="jp major"><div class="name">MAJOR</div><div class="val" id="jpMajor">771,670,450</div></div>
+      <div class="jp minor"><div class="name">MINOR</div><div class="val" id="jpMinor">5,276,245,467</div></div>
+      <div class="jp mini"><div class="name">MINI</div><div class="val" id="jpMini">92,556,867</div></div>
+    </div>
+
+    <div id="clownStage">
+      <svg id="clown" viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg" aria-label="creepy clown">
+        <defs>
+          <radialGradient id="faceG" cx="50%" cy="38%" r="65%">
+            <stop offset="0%" stop-color="#f5efe0"/>
+            <stop offset="70%" stop-color="#ded2b8"/>
+            <stop offset="100%" stop-color="#b3a184"/>
+          </radialGradient>
+          <radialGradient id="hairG" cx="50%" cy="40%" r="70%">
+            <stop offset="0%" stop-color="#ff5a3c"/>
+            <stop offset="60%" stop-color="#d92a12"/>
+            <stop offset="100%" stop-color="#7a1005"/>
+          </radialGradient>
+        </defs>
+        <!-- hair -->
+        <g fill="url(#hairG)">
+          <circle cx="48" cy="58" r="30"/><circle cx="32" cy="86" r="24"/><circle cx="152" cy="58" r="30"/>
+          <circle cx="168" cy="86" r="24"/><circle cx="62" cy="34" r="24"/><circle cx="138" cy="34" r="24"/>
+          <circle cx="100" cy="24" r="26"/><circle cx="40" cy="112" r="18"/><circle cx="160" cy="112" r="18"/>
+        </g>
+        <!-- face -->
+        <ellipse cx="100" cy="88" rx="52" ry="60" fill="url(#faceG)"/>
+        <!-- cracked paint drips -->
+        <path d="M78 34 q3 14 -1 26 M124 36 q-2 12 2 24" stroke="#b3a184" stroke-width="2" fill="none"/>
+        <!-- blue eye diamonds -->
+        <path d="M72 62 L84 74 L72 92 L60 74 Z" fill="#1d4ed8" opacity=".92"/>
+        <path d="M128 62 L140 74 L128 92 L116 74 Z" fill="#1d4ed8" opacity=".92"/>
+        <!-- eyes -->
+        <ellipse cx="72" cy="76" rx="8.5" ry="7" fill="#fff"/>
+        <ellipse cx="128" cy="76" rx="8.5" ry="7" fill="#fff"/>
+        <circle cx="73" cy="77" r="3.6" fill="#3b0d0d"/>
+        <circle cx="127" cy="77" r="3.6" fill="#3b0d0d"/>
+        <circle cx="74.5" cy="75.5" r="1.2" fill="#ffb3b3"/>
+        <circle cx="128.5" cy="75.5" r="1.2" fill="#ffb3b3"/>
+        <!-- angry brows -->
+        <path d="M58 63 L86 70" stroke="#5c0a12" stroke-width="5" stroke-linecap="round"/>
+        <path d="M142 63 L114 70" stroke="#5c0a12" stroke-width="5" stroke-linecap="round"/>
+        <!-- nose -->
+        <circle cx="100" cy="94" r="10" fill="#e11d2e"/>
+        <circle cx="97" cy="91" r="3" fill="#ff7b88"/>
+        <!-- grin -->
+        <path d="M62 106 Q100 142 138 106 Q120 128 100 128 Q80 128 62 106 Z" fill="#7a0619"/>
+        <path d="M66 108 Q100 136 134 108" stroke="#3d0206" stroke-width="2" fill="none"/>
+        <g fill="#f2ead2">
+          <path d="M72 110 l7 0 0 8 -7 -2 Z"/><path d="M84 115 l7 1 0 9 -7 -3 Z"/>
+          <path d="M97 118 l7 0 0 9 -7 0 Z"/><path d="M110 116 l7 -1 0 9 -7 2 Z"/><path d="M122 111 l7 -1 0 8 -7 2 Z"/>
+        </g>
+        <!-- smile paint -->
+        <path d="M56 98 Q100 152 144 98" stroke="#c1121f" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <!-- blood spatter -->
+        <g fill="#a10f1c" opacity=".85">
+          <circle cx="88" cy="46" r="3"/><circle cx="96" cy="52" r="2"/><circle cx="118" cy="48" r="2.6"/>
+          <circle cx="64" cy="100" r="2.2"/><circle cx="136" cy="102" r="2"/>
+          <path d="M104 40 q2 10 -1 18 l-3 -2 q3 -8 1 -16 Z"/>
+        </g>
+        <!-- ruffle collar -->
+        <g fill="#e9dfc4" stroke="#9c8a66" stroke-width="1.5">
+          <ellipse cx="58" cy="150" rx="17" ry="12"/><ellipse cx="80" cy="156" rx="17" ry="13"/>
+          <ellipse cx="100" cy="158" rx="17" ry="13"/><ellipse cx="120" cy="156" rx="17" ry="13"/>
+          <ellipse cx="142" cy="150" rx="17" ry="12"/>
+        </g>
+        <g fill="#a10f1c" opacity=".8">
+          <circle cx="76" cy="152" r="3"/><circle cx="104" cy="156" r="2.4"/><circle cx="130" cy="151" r="3.2"/>
+        </g>
+        <!-- shoulders -->
+        <path d="M30 190 Q42 158 70 154 L130 154 Q158 158 170 190 Z" fill="#cfc3a5"/>
+        <path d="M95 160 L105 160 L106 190 L94 190 Z" fill="#c1121f"/>
+        <g fill="#a10f1c" opacity=".75">
+          <circle cx="62" cy="172" r="4"/><circle cx="140" cy="176" r="5"/><circle cx="118" cy="168" r="3"/>
+        </g>
+      </svg>
+    </div>
+
+    <div id="reelWrap"><div id="reelFrame"></div></div>
+
+    <div id="msgBar">SPIN TO FACE THE KLOWN…</div>
+
+    <div id="meters">
+      <div class="meter"><div class="mlbl">BALANCE</div><div class="mval" id="balVal">0</div></div>
+      <div class="meter"><div class="mlbl">BET</div><div class="mval" id="betVal">0</div></div>
+      <div class="meter" id="winMeter"><div class="mlbl">WIN</div><div class="mval" id="winVal">0</div></div>
+    </div>
+
+    <div id="controls">
+      <button class="btn betBtn" id="betDown">−</button>
+      <button class="btn" id="spinBtn">SPIN</button>
+      <button class="btn betBtn" id="betUp">+</button>
+    </div>
+  </div>
+
+  <button id="muteBtn" title="sound">🔊</button>
+  <div id="disclaimer">Just for fun — in-game credits are not real money.</div>
+
+  <!-- Big win overlay -->
+  <div class="overlay" id="winOverlay">
+    <div class="bigTitle" id="winTitle">BIG WIN</div>
+    <div class="bigAmount" id="winAmount">0</div>
+  </div>
+
+  <!-- Free games picker -->
+  <div class="overlay" id="fgOverlay">
+    <div class="bigTitle blood">FREE GAMES!</div>
+    <div class="overlaySub">The Klown offers a deal… pick your poison</div>
+    <div class="fgChoices">
+      <div class="fgCard" data-pick="0"><div class="q">?</div><div class="t">PICK ME</div></div>
+      <div class="fgCard" data-pick="1"><div class="q">?</div><div class="t">PICK ME</div></div>
+      <div class="fgCard" data-pick="2"><div class="q">?</div><div class="t">PICK ME</div></div>
+    </div>
+  </div>
+
+  <!-- Coin frenzy result -->
+  <div class="overlay" id="coinOverlay">
+    <div class="bigTitle blood">COIN FRENZY</div>
+    <div class="bigAmount" id="coinAmount">0</div>
+    <div class="overlaySub" id="coinSub"></div>
+    <button class="overlayBtn" id="coinOk">COLLECT</button>
+  </div>
+
+  <!-- Free games summary -->
+  <div class="overlay" id="fgDoneOverlay">
+    <div class="bigTitle">FREE GAMES OVER</div>
+    <div class="bigAmount" id="fgTotal">0</div>
+    <div class="overlaySub">total free-games win</div>
+    <button class="overlayBtn" id="fgDoneOk">CONTINUE</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   KILLER KLOWN CASH — horror clown slot (play-money)
+   5 reels x 4 rows, 20 lines, free games, coin frenzy,
+   reel-expand wilds, fake jackpot tickers.
+   ========================================================= */
+
+const COLS = 5, ROWS = 4;
+const fmt = n => Math.round(n).toLocaleString("en-US");
+
+/* ---------- symbols ---------- */
+const S = {
+  J:"J", Q:"Q", K:"K", A:"A",
+  BALLOON:"BALLOON", KNIFE:"KNIFE", TENT:"TENT",
+  WILD:"WILD",            // clown head — substitutes all paying symbols
+  COIN:"COIN",            // holds a credit value; 6+ = Coin Frenzy
+  FG:"FG",                // free games bonus (reels 1/3/5)
+  EXPAND:"EXPAND"         // turns its whole reel wild before evaluation
+};
+
+/* paytable: multiplier of TOTAL BET for 3/4/5 of a kind */
+const PAY = {
+  J:[.2,.6,1.5], Q:[.2,.6,1.5], K:[.3,.8,2], A:[.3,.8,2],
+  BALLOON:[.6,1.6,4], KNIFE:[.8,2,5], TENT:[1,3,8],
+  WILD:[2,6,20]
+};
+
+/* 20 paylines (row index per column) */
+const LINES = [
+  [0,0,0,0,0],[1,1,1,1,1],[2,2,2,2,2],[3,3,3,3,3],
+  [0,1,2,1,0],[3,2,1,2,3],[1,0,0,0,1],[2,3,3,3,2],
+  [0,0,1,2,3],[3,3,2,1,0],[1,2,3,2,1],[2,1,0,1,2],
+  [0,1,1,1,0],[3,2,2,2,3],[1,1,0,1,1],[2,2,3,2,2],
+  [0,2,0,2,0],[3,1,3,1,3],[1,3,1,3,1],[2,0,2,0,2]
+];
+
+/* base-game reel weights */
+const BASE_WEIGHTS = [
+  [S.J,10],[S.Q,10],[S.K,9],[S.A,9],
+  [S.BALLOON,7],[S.KNIFE,6],[S.TENT,5],
+  [S.WILD,2.2],[S.COIN,4.6],[S.FG,1.6],[S.EXPAND,.9]
+];
+/* free-games reels are juicier */
+const FREE_WEIGHTS = [
+  [S.J,9],[S.Q,9],[S.K,8],[S.A,8],
+  [S.BALLOON,7],[S.KNIFE,6],[S.TENT,6],
+  [S.WILD,3.4],[S.COIN,5.2],[S.FG,1.2],[S.EXPAND,1.6]
+];
+
+const COIN_VALUES = [ // [multiplier of bet, label weight]
+  [.5,10],[1,8],[2,6],[3,4],[5,3],[8,1.6],[10,1]
+];
+const COIN_LABELS = m => {
+  // style values like the ad: big M numbers scale with bet
+  const v = m*state.bet;
+  if (v >= 1e9) return (v/1e9).toFixed(v%1e9?1:0)+"B";
+  if (v >= 1e6) return (v/1e6).toFixed(v%1e6?1:0).replace(/\.0$/,"")+"M";
+  if (v >= 1e3) return (v/1e3).toFixed(0)+"K";
+  return fmt(v);
+};
+
+const BETS = [10e6, 25e6, 50e6, 100e6, 250e6, 500e6, 1e9, 2.5e9];
+
+const state = {
+  balance: 500e9,
+  betIdx: 3,
+  get bet(){ return BETS[this.betIdx]; },
+  spinning:false,
+  freeSpins:0,
+  freeTotal:0,
+  inFree:false,
+  muted:false,
+  grid:[],      // grid[c][r] = {sym, coinMult?, jackpot?}
+};
+
+/* ---------- audio (tiny WebAudio blips) ---------- */
+let AC = null;
+function beep(freq, dur=0.08, type="square", vol=0.05, when=0){
+  if (state.muted) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, AC.currentTime+when);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+when+dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(AC.currentTime+when); o.stop(AC.currentTime+when+dur+.02);
+  }catch(e){}
+}
+const sfx = {
+  spin(){ beep(160,.1,"sawtooth",.04); },
+  stop(i){ beep(220+i*40,.07,"square",.05); },
+  win(){ [523,659,784,1047].forEach((f,i)=>beep(f,.12,"triangle",.06,i*.09)); },
+  big(){ [392,523,659,784,988,1175].forEach((f,i)=>beep(f,.16,"triangle",.07,i*.11)); },
+  coin(){ beep(1318,.06,"sine",.05); beep(1760,.08,"sine",.04,.05); },
+  evil(){ [98,92,82,73].forEach((f,i)=>beep(f,.3,"sawtooth",.06,i*.22)); },
+};
+
+/* ---------- jackpot tickers ---------- */
+const jackpots = {
+  grand:{el:document.getElementById("jpGrand"), v:303979731556, rate:9500},
+  major:{el:document.getElementById("jpMajor"), v:771670450, rate:220},
+  minor:{el:document.getElementById("jpMinor"), v:5276245467, rate:1400},
+  mini:{el:document.getElementById("jpMini"), v:92556867, rate:60},
+};
+setInterval(()=>{
+  for (const k in jackpots){
+    const j = jackpots[k];
+    j.v += j.rate * (0.6 + Math.random()*0.8) * 137;
+    j.el.textContent = fmt(j.v);
+  }
+}, 240);
+
+/* ---------- build reel DOM ---------- */
+const frame = document.getElementById("reelFrame");
+const cellEls = []; // [c][r]
+for (let c = 0; c < COLS; c++){
+  const reel = document.createElement("div");
+  reel.className = "reel";
+  const col = [];
+  for (let r = 0; r < ROWS; r++){
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    reel.appendChild(cell);
+    col.push(cell);
+  }
+  frame.appendChild(reel);
+  cellEls.push(col);
+}
+const reelEls = [...frame.children];
+
+/* ---------- symbol rendering ---------- */
+const CLOWN_MINI = document.getElementById("clown").outerHTML
+  .replace('id="clown"','class="miniClown"')
+  .replace(/id="(faceG|hairG)"/g,'id="$1m"')
+  .replace(/url\(#(faceG|hairG)\)/g,'url(#$1m)');
+
+function renderCell(cell, s){
+  let html = "";
+  switch (s.sym){
+    case S.J: case S.Q: case S.K: case S.A:
+      html = `<div class="sym letter">${s.sym}</div>`; break;
+    case S.BALLOON: html = `<div class="sym">🎈</div>`; break;
+    case S.KNIFE:   html = `<div class="sym">🔪</div>`; break;
+    case S.TENT:    html = `<div class="sym">🎪</div>`; break;
+    case S.WILD:    html = `<div class="sym svgwrap">${CLOWN_MINI}</div>`; break;
+    case S.COIN:
+      html = s.jackpot
+        ? `<div class="coin jpcoin"><div class="cv">${s.jackpot}</div></div>`
+        : `<div class="coin"><div class="cv">${COIN_LABELS(s.coinMult)}</div></div>`;
+      break;
+    case S.FG:
+      html = `<div class="fg"><div class="plus">+${s.fgCount}</div><div class="lbl">FREE GAMES</div></div>`; break;
+    case S.EXPAND:
+      html = `<div class="expand">REEL<br>EXPAND</div>`; break;
+  }
+  cell.innerHTML = html;
+}
+
+/* ---------- RNG helpers ---------- */
+function weightedPick(weights){
+  let tot = 0; for (const [,w] of weights) tot += w;
+  let x = Math.random()*tot;
+  for (const [v,w] of weights){ x -= w; if (x <= 0) return v; }
+  return weights[0][0];
+}
+function makeSymbol(col, weights){
+  let sym = weightedPick(weights);
+  if (sym === S.FG && col !== 0 && col !== 2 && col !== 4) sym = S.KNIFE; // FG on reels 1/3/5 only
+  const s = { sym };
+  if (sym === S.COIN){
+    if (Math.random() < 0.05){
+      s.jackpot = Math.random() < 0.75 ? "MINI" : "MINOR";
+    } else {
+      s.coinMult = weightedPick(COIN_VALUES.map(([m,w])=>[m,w]));
+    }
+  }
+  if (sym === S.FG) s.fgCount = weightedPick([[8,10],[10,6],[20,2]]);
+  return s;
+}
+
+/* ---------- UI helpers ---------- */
+const $ = id => document.getElementById(id);
+const msg = t => { $("msgBar").textContent = t; };
+function updateMeters(win = 0){
+  $("balVal").textContent = fmt(state.balance);
+  $("betVal").textContent = fmt(state.bet);
+  $("winVal").textContent = fmt(win);
+}
+function clearFx(){
+  document.querySelectorAll(".cell.winHit").forEach(c=>c.classList.remove("winHit"));
+}
+function burstParticles(n = 26){
+  const g = $("game"), rect = g.getBoundingClientRect();
+  for (let i = 0; i < n; i++){
+    const p = document.createElement("div");
+    p.className = "part";
+    const colr = ["#ffd166","#ff2d55","#f4c430","#fff2c4","#c1121f"][i%5];
+    p.style.background = colr;
+    p.style.boxShadow = `0 0 8px ${colr}`;
+    p.style.left = rect.width/2+"px";
+    p.style.top = rect.height*0.45+"px";
+    g.appendChild(p);
+    const ang = Math.random()*Math.PI*2, sp = 130+Math.random()*260;
+    const dx = Math.cos(ang)*sp, dy = Math.sin(ang)*sp - 120;
+    p.animate([
+      {transform:"translate(0,0) scale(1)", opacity:1},
+      {transform:`translate(${dx}px,${dy+260}px) scale(.2)`, opacity:0}
+    ], {duration:900+Math.random()*500, easing:"cubic-bezier(.2,.6,.4,1)"}).onfinish = ()=>p.remove();
+  }
+}
+function showOverlay(id){ $(id).classList.add("show"); }
+function hideOverlay(id){ $(id).classList.remove("show"); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function countUp(el, from, to, ms){
+  const t0 = performance.now();
+  return new Promise(res=>{
+    function tick(t){
+      const k = Math.min(1,(t-t0)/ms);
+      el.textContent = fmt(from+(to-from)*(1-Math.pow(1-k,3)));
+      if (k < 1) requestAnimationFrame(tick); else res();
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ---------- spin flow ---------- */
+async function spin(){
+  if (state.spinning) return;
+  if (!state.inFree && state.balance < state.bet){ msg("OUT OF CREDITS… THE KLOWN LAUGHS. (refreshing stack)"); state.balance = 500e9; updateMeters(); return; }
+  state.spinning = true;
+  $("spinBtn").disabled = true;
+  clearFx();
+  updateMeters(0);
+
+  if (!state.inFree){ state.balance -= state.bet; }
+  updateMeters(0);
+  msg(state.inFree ? `FREE GAMES — ${state.freeSpins} LEFT` : "REELS OF TERROR…");
+  sfx.spin();
+
+  const weights = state.inFree ? FREE_WEIGHTS : BASE_WEIGHTS;
+  // final result
+  let grid = [];
+  for (let c = 0; c < COLS; c++){
+    const col = [];
+    for (let r = 0; r < ROWS; r++) col.push(makeSymbol(c, weights));
+    grid.push(col);
+  }
+  if (window.__forceGrid){ grid = window.__forceGrid; window.__forceGrid = null; }
+  state.grid = grid;
+
+  // animate: all reels cycle random symbols, stop staggered
+  const cycles = [];
+  for (let c = 0; c < COLS; c++){
+    reelEls[c].classList.add("spinning");
+    cycles[c] = setInterval(()=>{
+      for (let r = 0; r < ROWS; r++) renderCell(cellEls[c][r], makeSymbol(c, weights));
+    }, 60);
+  }
+  for (let c = 0; c < COLS; c++){
+    await sleep(c === 0 ? 550 : 240);
+    clearInterval(cycles[c]);
+    reelEls[c].classList.remove("spinning");
+    for (let r = 0; r < ROWS; r++){
+      const cell = cellEls[c][r];
+      renderCell(cell, grid[c][r]);
+      cell.classList.remove("land"); void cell.offsetWidth; cell.classList.add("land");
+    }
+    sfx.stop(c);
+  }
+
+  // REEL EXPAND: any reel containing EXPAND goes full wild
+  const expandCols = [];
+  for (let c = 0; c < COLS; c++)
+    if (grid[c].some(s=>s.sym === S.EXPAND)) expandCols.push(c);
+  if (expandCols.length){
+    sfx.evil();
+    msg("REEL EXPAND! THE KLOWN TAKES THE REEL!");
+    await sleep(450);
+    for (const c of expandCols){
+      for (let r = 0; r < ROWS; r++){
+        grid[c][r] = {sym:S.WILD};
+        renderCell(cellEls[c][r], grid[c][r]);
+        cellEls[c][r].classList.add("winHit");
+      }
+      beep(660,.15,"sawtooth",.06);
+      await sleep(300);
+    }
+    await sleep(400);
+    clearFx();
+  }
+
+  // evaluate
+  let win = 0;
+  const hits = new Set(); // "c,r"
+
+  // line wins
+  for (const line of LINES){
+    const first = [];
+    let sym = null;
+    for (let c = 0; c < COLS; c++){
+      const s = grid[c][line[c]].sym;
+      if (c === 0){
+        if (s === S.COIN || s === S.FG) break;
+        sym = s; first.push([c,line[c]]);
+      } else if (s === sym || s === S.WILD || (sym === S.WILD && PAY[s])){
+        if (sym === S.WILD && s !== S.WILD) sym = s;
+        first.push([c,line[c]]);
+      } else break;
+    }
+    if (sym && PAY[sym] && first.length >= 3){
+      win += PAY[sym][first.length-3] * state.bet;
+      first.forEach(([c,r])=>hits.add(c+","+r));
+    }
+  }
+
+  // coin frenzy: 6+ coins anywhere
+  const coins = [];
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS; r++)
+      if (grid[c][r].sym === S.COIN) coins.push([c,r]);
+  let coinWin = 0, jpHits = [];
+  if (coins.length >= 6){
+    for (const [c,r] of coins){
+      const s = grid[c][r];
+      if (s.jackpot) jpHits.push(s.jackpot);
+      else coinWin += s.coinMult * state.bet;
+      hits.add(c+","+r);
+    }
+  }
+
+  // free games trigger: 3+ FG symbols
+  const fgSyms = [];
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS; r++)
+      if (grid[c][r].sym === S.FG) fgSyms.push(grid[c][r]);
+
+  // show line wins
+  if (hits.size){
+    hits.forEach(k=>{
+      const [c,r] = k.split(",");
+      cellEls[+c][+r].classList.add("winHit");
+    });
+  }
+
+  if (win > 0){ sfx.win(); }
+
+  // coin frenzy payout
+  if (coins.length >= 6){
+    await sleep(600);
+    let jpWin = 0, jpNames = [];
+    for (const jp of jpHits){
+      const j = jackpots[jp.toLowerCase()];
+      jpWin += j.v; jpNames.push(jp);
+      j.v = jp === "MINI" ? 90e6 : 5.2e9; // reseed
+    }
+    coinWin += jpWin;
+    $("coinAmount").textContent = fmt(0);
+    $("coinSub").textContent = jpNames.length ? `INCLUDES ${jpNames.join(" + ")} JACKPOT!` : `${coins.length} cursed coins collected`;
+    showOverlay("coinOverlay");
+    sfx.big(); burstParticles(34);
+    await countUp($("coinAmount"), 0, coinWin, 1400);
+    await new Promise(res=>{ $("coinOk").onclick = ()=>{ hideOverlay("coinOverlay"); res(); }; });
+    win += coinWin;
+  }
+
+  // settle win
+  if (win > 0){
+    state.balance += win;
+    if (state.inFree) state.freeTotal += win;
+    updateMeters(win);
+    const mult = win/state.bet;
+    if (mult >= 10){
+      $("winTitle").textContent = mult >= 50 ? "EPIC KLOWN WIN!" : mult >= 25 ? "MEGA WIN" : "BIG WIN";
+      $("winTitle").classList.toggle("blood", mult >= 50);
+      $("winAmount").textContent = "0";
+      showOverlay("winOverlay");
+      $("game").classList.add("shake");
+      setTimeout(()=>$("game").classList.remove("shake"), 500);
+      sfx.big(); burstParticles(40);
+      await countUp($("winAmount"), 0, win, Math.min(2600, 900+mult*30));
+      await sleep(900);
+      hideOverlay("winOverlay");
+    } else {
+      msg(`WIN ${fmt(win)}!`);
+    }
+  } else if (coins.length < 6){
+    msg(state.inFree ? `FREE GAMES — ${state.freeSpins} LEFT` : "THE KLOWN KEEPS YOUR SOUL… SPIN AGAIN");
+  }
+  updateMeters(win);
+
+  // free games trigger
+  if (fgSyms.length >= 3 && !state.inFree){
+    sfx.evil();
+    await sleep(700);
+    await freeGamesPicker();
+  } else if (fgSyms.length >= 3 && state.inFree){
+    const extra = Math.max(...fgSyms.map(s=>s.fgCount));
+    state.freeSpins += extra;
+    msg(`+${extra} MORE FREE GAMES!`);
+    sfx.big();
+    await sleep(900);
+  }
+
+  state.spinning = false;
+  $("spinBtn").disabled = false;
+
+  // continue free games
+  if (state.inFree){
+    state.freeSpins--;
+    if (state.freeSpins > 0){
+      msg(`FREE GAMES — ${state.freeSpins} LEFT`);
+      await sleep(700);
+      spin();
+    } else {
+      state.inFree = false;
+      $("fgTotal").textContent = fmt(state.freeTotal);
+      showOverlay("fgDoneOverlay");
+      sfx.big(); burstParticles(30);
+      await new Promise(res=>{ $("fgDoneOk").onclick = ()=>{ hideOverlay("fgDoneOverlay"); res(); }; });
+      msg("BACK TO THE BASE GAME…");
+    }
+  }
+}
+
+/* pick-a-card free games entry */
+function freeGamesPicker(){
+  return new Promise(res=>{
+    const opts = [8,10,20].sort(()=>Math.random()-.5);
+    showOverlay("fgOverlay");
+    sfx.evil();
+    document.querySelectorAll(".fgCard").forEach((card,i)=>{
+      card.querySelector(".q").textContent = "?";
+      card.querySelector(".t").textContent = "PICK ME";
+      card.onclick = async ()=>{
+        document.querySelectorAll(".fgCard").forEach((c2,j)=>{
+          c2.onclick = null;
+          c2.querySelector(".q").textContent = "+"+opts[j];
+          c2.querySelector(".t").textContent = "FREE GAMES";
+        });
+        sfx.big(); burstParticles(26);
+        state.freeSpins = opts[i]+1; // +1 because loop decrements after this spin's chain
+        state.freeTotal = 0;
+        state.inFree = true;
+        await sleep(1600);
+        hideOverlay("fgOverlay");
+        res();
+      };
+    });
+  });
+}
+
+/* ---------- controls ---------- */
+$("spinBtn").onclick = ()=>spin();
+$("betDown").onclick = ()=>{ if (!state.spinning && state.betIdx > 0){ state.betIdx--; updateMeters(); fillIdle(); } };
+$("betUp").onclick = ()=>{ if (!state.spinning && state.betIdx < BETS.length-1){ state.betIdx++; updateMeters(); fillIdle(); } };
+$("muteBtn").onclick = ()=>{ state.muted = !state.muted; $("muteBtn").textContent = state.muted ? "🔇" : "🔊"; };
+window.addEventListener("keydown", e=>{ if (e.code === "Space"){ e.preventDefault(); spin(); } });
+
+/* initial grid */
+function fillIdle(){
+  if (state.spinning) return;
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS; r++)
+      renderCell(cellEls[c][r], makeSymbol(c, BASE_WEIGHTS));
+}
+fillIdle();
+updateMeters();
+window.__slot = { state, S }; // debug/testing hook
+
+</script>
+</body>
+</html>
