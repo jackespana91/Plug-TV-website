@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fish Link Frenzy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐠</text></svg>">
+<style>
+  :root{
+    --purple-dark:#3a0a5e; --purple:#7a1fb8; --purple-lite:#b34ee8;
+    --gold:#ffd23f; --gold-dark:#e8960c; --green:#4fd932; --green-dark:#1f8a12;
+    --panel:#1c0b3a; --frame:#8a5a1e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:#12041f;
+    font-family:'Arial Black','Segoe UI',Arial,sans-serif;
+    display:flex;justify-content:center;
+    overflow-x:hidden;
+    user-select:none;
+  }
+  #game{
+    width:100%;max-width:470px;min-height:100vh;
+    background:linear-gradient(180deg,#5b1290 0%,#7a1fb8 6%,#3f7fc9 20%,#5ea9d8 34%,#2f6fb0 55%,#274a86 70%,#4a1276 88%,#2c0748 100%);
+    position:relative;display:flex;flex-direction:column;
+    box-shadow:0 0 60px #000;
+  }
+  /* ============ TOP BAR ============ */
+  #topbar{
+    display:flex;align-items:center;gap:6px;padding:8px 10px 4px;
+    background:linear-gradient(180deg,#8e24d8,#6a14a8);
+    border-bottom:2px solid #4c0d7e;z-index:5;
+  }
+  .coinpill{
+    flex:1;display:flex;align-items:center;gap:5px;
+    background:#2a0847;border-radius:16px;padding:4px 10px 4px 6px;
+    border:1px solid #9b4fd4;min-width:0;
+  }
+  .coinpill .coin{font-size:16px;}
+  #balance{color:#fff;font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .topbtn{
+    padding:6px 12px;border-radius:12px;font-size:12px;font-weight:900;color:#fff;
+    border:2px solid rgba(255,255,255,.5);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+  .buy{background:linear-gradient(180deg,#7fe83a,#2fa50f);}
+  .sale{background:linear-gradient(180deg,#ff5fa0,#c9147a);}
+  .lvl{background:linear-gradient(180deg,#ffb62e,#d9650b);font-size:11px;text-align:center;line-height:1.1;}
+  /* ============ JACKPOTS ============ */
+  #jackpots{padding:8px 8px 2px;z-index:4;}
+  #grandbar{
+    background:linear-gradient(180deg,#43104f,#2b0836);
+    border:2px solid #d98a1f;border-radius:12px 12px 0 0;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:5px 8px;
+  }
+  #grandbar .glabel{
+    font-size:20px;font-weight:900;letter-spacing:1px;
+    background:linear-gradient(180deg,#ffe95c,#ff8a00 55%,#ff3d00);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.55));
+  }
+  #grandval{color:#fff;font-size:15px;font-weight:900;text-shadow:0 0 8px #ffce4b;}
+  #grandval.locked{color:#ffd23f;font-size:13px;letter-spacing:.5px;}
+  .jprow{display:flex;gap:4px;margin-top:3px;}
+  .jp{
+    flex:1;border-radius:8px;padding:3px 2px;text-align:center;border:2px solid;
+    background:#170527;
+  }
+  .jp .name{font-size:11px;font-weight:900;letter-spacing:1px;}
+  .jp .val{font-size:10.5px;color:#ffe95c;font-weight:900;white-space:nowrap;}
+  .jp.major{border-color:#e83ee8;}    .jp.major .name{color:#ff7bff;}
+  .jp.minor{border-color:#3e9de8;}    .jp.minor .val{color:#9be0ff;} .jp.minor .name{color:#5cc4ff;}
+  .jp.mini{border-color:#7fe83a;}     .jp.mini .name{color:#9dff5c;}
+  /* ============ SCENE / BUCKETS ============ */
+  #scene{padding:6px 8px 4px;position:relative;z-index:3;}
+  #boatrow{display:flex;align-items:center;justify-content:space-between;padding:0 6px;}
+  #boat{
+    font-size:44px;line-height:1;filter:drop-shadow(0 4px 6px rgba(0,0,0,.4));
+    position:relative;cursor:pointer;
+  }
+  #boat .goldfish{position:absolute;top:-12px;left:8px;font-size:22px;filter:sepia(1) saturate(4) hue-rotate(-15deg) drop-shadow(0 0 4px #ffd23f);}
+  #superpick-sign{
+    background:linear-gradient(180deg,#a3641f,#7a4512);
+    border:3px solid #5c330c;border-radius:10px;padding:4px 12px;
+    transform:rotate(4deg);text-align:center;box-shadow:0 4px 8px rgba(0,0,0,.4);
+  }
+  #superpick-sign .t{
+    font-size:19px;font-weight:900;letter-spacing:1px;line-height:1;
+    background:linear-gradient(180deg,#fff85c,#ffb300);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 1px 0 rgba(120,40,0,.9));
+  }
+  #goldmeter{margin-top:3px;height:10px;background:#2b0836;border-radius:5px;overflow:hidden;border:1px solid #ffd23f;}
+  #goldmeter i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffd23f,#ff8a00);transition:width .4s;}
+  #goldcount{font-size:10px;color:#ffe95c;font-weight:900;}
+  #buckets{display:flex;gap:6px;margin-top:6px;}
+  .bucket{
+    flex:1;text-align:center;border-radius:12px;padding:6px 4px 5px;
+    border:2px solid;position:relative;background:rgba(10,4,30,.45);
+    cursor:pointer;
+  }
+  .bucket .bicon{font-size:30px;line-height:1;display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));}
+  .bucket .bname{
+    font-size:11px;font-weight:900;letter-spacing:.5px;line-height:1.05;margin-top:2px;
+    text-shadow:0 1px 0 rgba(0,0,0,.7);
+  }
+  .bucket .meter{margin-top:4px;height:9px;background:#160526;border-radius:5px;overflow:hidden;}
+  .bucket .meter i{display:block;height:100%;width:0%;transition:width .4s;}
+  .bucket .cnt{position:absolute;top:-7px;right:-4px;background:#12041f;border:1px solid #fff;
+    border-radius:9px;font-size:9px;color:#fff;font-weight:900;padding:1px 5px;}
+  .bucket.pink{border-color:#e83ee8;}  .bucket.pink .bname{color:#ff9bff;} .bucket.pink .meter i{background:linear-gradient(90deg,#ff7bff,#c916c9);}
+  .bucket.red{border-color:#ff4b4b;}   .bucket.red .bname{color:#ffb14b;}  .bucket.red .meter i{background:linear-gradient(90deg,#ffb14b,#e82f2f);}
+  .bucket.blue{border-color:#3e9de8;}  .bucket.blue .bname{color:#8fd4ff;} .bucket.blue .meter i{background:linear-gradient(90deg,#8fd4ff,#1f6fd9);}
+  .fish-red{filter:hue-rotate(150deg) saturate(3) brightness(1.05);}
+  .fish-pink{filter:hue-rotate(105deg) saturate(2) brightness(1.25);}
+  .fish-blue{filter:saturate(1.8);}
+  .fish-gold{filter:sepia(1) saturate(5) hue-rotate(-18deg) brightness(1.1) drop-shadow(0 0 6px #ffd23f);}
+  /* ============ TICKER ============ */
+  #ticker{
+    margin:5px 8px 0;background:linear-gradient(180deg,#5c2a06,#3d1a02);
+    border:2px solid #d98a1f;border-radius:8px;overflow:hidden;height:24px;position:relative;z-index:3;
+  }
+  #ticker span{
+    position:absolute;white-space:nowrap;font-size:12px;font-weight:900;color:#ffe0a3;
+    line-height:24px;animation:tick 14s linear infinite;text-shadow:0 1px 0 #000;
+  }
+  @keyframes tick{from{transform:translateX(470px);}to{transform:translateX(-110%);}}
+  /* ============ REELS ============ */
+  #reelframe{
+    margin:6px 8px;padding:8px;border-radius:14px;position:relative;z-index:3;
+    background:
+      repeating-linear-gradient(90deg,#8a5a1e 0 10px,#a06c26 10px 20px);
+    border:3px solid #5c3a0e;box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 12px rgba(0,0,0,.5);
+  }
+  #reels{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
+    background:#0d0a33;border-radius:8px;padding:5px;overflow:hidden;position:relative;
+  }
+  .reel{display:flex;flex-direction:column;gap:4px;}
+  .cell{
+    aspect-ratio:1/0.92;background:linear-gradient(180deg,#1a1550,#0f0b3c);
+    border-radius:7px;display:flex;align-items:center;justify-content:center;
+    position:relative;border:1px solid #2c2470;overflow:hidden;
+  }
+  .cell .sym{font-size:min(9.2vw,42px);line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
+  .cell .letter{
+    font-size:min(10vw,46px);font-weight:900;
+    background:linear-gradient(180deg,#ffbf5c,#c9581a 60%,#8a3a0e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.7));
+  }
+  .cell .letter.k{background:linear-gradient(180deg,#ff6b6b,#c9161a 60%,#7a0a0e);
+    -webkit-background-clip:text;background-clip:text;}
+  .cell .letter.q{background:linear-gradient(180deg,#ff9bff,#c916c9 60%,#6e0a7a);
+    -webkit-background-clip:text;background-clip:text;}
+  .cell .letter.j{background:linear-gradient(180deg,#8fd4ff,#1f6fd9 60%,#0a3a7a);
+    -webkit-background-clip:text;background-clip:text;}
+  .cell .fval{
+    position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+    background:rgba(10,2,26,.85);border:1px solid #ffd23f;border-radius:8px;
+    color:#ffe95c;font-size:10px;font-weight:900;padding:0 6px;white-space:nowrap;
+  }
+  .cell.wildcell{border:2px solid #4be8ff;box-shadow:inset 0 0 10px #4be8ff88, 0 0 6px #4be8ff66;}
+  .cell .wtag{position:absolute;top:1px;left:50%;transform:translateX(-50%);
+    font-size:8px;color:#4be8ff;font-weight:900;letter-spacing:1px;}
+  .reel.spinning .cell .sym,.reel.spinning .cell .letter{filter:blur(3px);}
+  .cell.win{animation:winpulse .55s ease-in-out infinite alternate;z-index:2;}
+  @keyframes winpulse{
+    from{box-shadow:0 0 4px 1px #ffd23f;border-color:#ffd23f;}
+    to{box-shadow:0 0 16px 5px #ffd23f;border-color:#fff;transform:scale(1.04);}
+  }
+  .cell.fishflash{animation:fishflash .5s ease-out 2;}
+  @keyframes fishflash{0%{background:#3d2f8f;}50%{background:#7a5fd9;}100%{background:#1a1550;}}
+  #winpopup{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    pointer-events:none;z-index:6;
+  }
+  #winpopup .amt{
+    font-size:34px;font-weight:900;color:#ffe95c;
+    text-shadow:0 0 14px #ff8a00,0 3px 0 #7a3a00;
+    animation:pop .4s ease-out;
+  }
+  @keyframes pop{from{transform:scale(.3);opacity:0;}to{transform:scale(1);opacity:1;}}
+  /* ============ CONTROLS ============ */
+  #controls{
+    margin-top:auto;position:relative;z-index:4;
+    background:linear-gradient(180deg,#5b1290,#3a0a5e 40%,#26063e);
+    border-top:3px solid #9b4fd4;border-radius:26px 26px 0 0;
+    padding:10px 12px 14px;display:flex;align-items:center;gap:8px;
+  }
+  #infobtn{
+    width:46px;height:46px;border-radius:50%;flex:none;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#ffd23f,#c9760c);
+    border:3px solid #7a4a08;font-size:20px;font-weight:900;color:#5c2a06;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #centercol{flex:1;text-align:center;min-width:0;}
+  #totalwin-l{font-size:11px;color:#d9b3ff;font-weight:900;letter-spacing:2px;}
+  #totalwin{font-size:17px;color:#ffe95c;font-weight:900;text-shadow:0 0 8px #ff8a00;min-height:20px;}
+  #betrow{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:2px;}
+  .betbtn{
+    width:30px;height:30px;border-radius:50%;font-size:18px;font-weight:900;cursor:pointer;
+    background:linear-gradient(180deg,#b34ee8,#6a14a8);color:#fff;border:2px solid #d9a3ff;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+  }
+  .betbtn:active{transform:scale(.92);}
+  #betwrap{min-width:120px;}
+  #betval{font-size:15px;color:#fff;font-weight:900;}
+  #bet-l{font-size:9px;color:#d9b3ff;font-weight:900;letter-spacing:2px;}
+  #maxbet{
+    flex:none;width:52px;height:52px;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#a89ad9,#4a3a86);
+    border:3px solid #d9ccff;color:#fff;font-size:10px;font-weight:900;line-height:1.15;
+  }
+  #spinbtn{
+    flex:none;width:86px;height:64px;border-radius:22px;cursor:pointer;
+    background:linear-gradient(180deg,#8fff4b,#2fa50f 60%,#1f7a08);
+    border:3px solid #d4ffb0;box-shadow:0 5px 0 #145c04,0 8px 14px rgba(0,0,0,.5);
+    color:#fff;font-size:19px;font-weight:900;text-shadow:0 2px 0 #145c04;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;
+  }
+  #spinbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #145c04;}
+  #spinbtn .inf{font-size:15px;opacity:.9;}
+  #spinbtn.stop{background:linear-gradient(180deg,#ff8f4b,#d9430f 60%,#a52a05);border-color:#ffd4b0;box-shadow:0 5px 0 #7a1c02,0 8px 14px rgba(0,0,0,.5);}
+  #autobtn{
+    position:absolute;right:12px;top:-16px;padding:3px 12px;border-radius:12px;cursor:pointer;
+    background:linear-gradient(180deg,#4be8ff,#1f6fd9);border:2px solid #b0f0ff;
+    color:#06325c;font-size:11px;font-weight:900;
+  }
+  #autobtn.on{background:linear-gradient(180deg,#ffe95c,#e8960c);border-color:#fff3b0;color:#5c3a00;}
+  #disclaimer{font-size:8px;color:#9b7fc4;text-align:center;padding:0 0 4px;background:#26063e;}
+  /* ============ OVERLAYS ============ */
+  .overlay{
+    position:absolute;inset:0;z-index:20;display:none;flex-direction:column;
+    background:rgba(8,1,20,.88);backdrop-filter:blur(3px);
+    align-items:center;justify-content:center;padding:14px;
+  }
+  .overlay.show{display:flex;}
+  .ov-title{
+    font-size:36px;font-weight:900;letter-spacing:1px;text-align:center;
+    background:linear-gradient(180deg,#fff85c,#ffb300 60%,#ff7a00);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 0 rgba(90,20,0,.8));
+    animation:titlein .5s ease-out;
+  }
+  @keyframes titlein{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .ov-panel{
+    width:100%;max-width:430px;background:linear-gradient(180deg,#4c0d7e,#2b0846);
+    border:3px solid #b34ee8;border-radius:20px;padding:12px;margin-top:8px;
+    box-shadow:0 0 30px #b34ee855;
+  }
+  .ov-btn{
+    margin-top:12px;padding:10px 34px;border-radius:16px;cursor:pointer;
+    background:linear-gradient(180deg,#8fff4b,#2fa50f 60%,#1f7a08);
+    border:3px solid #d4ffb0;color:#fff;font-size:18px;font-weight:900;
+    text-shadow:0 2px 0 #145c04;box-shadow:0 4px 0 #145c04;
+  }
+  .ov-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #145c04;}
+  /* ---- Fish Link ---- */
+  #fishlink{justify-content:flex-start;padding-top:20px;overflow-y:auto;}
+  #fl-head{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:430px;margin:4px 0;}
+  #fl-spins{
+    background:linear-gradient(180deg,#fff,#d9d0f0);border:3px solid #7a1fb8;
+    border-radius:10px;padding:3px 12px;text-align:center;
+    font-size:15px;font-weight:900;color:#3a0a5e;
+  }
+  #fl-spins b{color:#c9147a;font-size:19px;}
+  #fl-perks{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:210px;}
+  .perkbadge{
+    font-size:9px;font-weight:900;padding:3px 8px;border-radius:9px;color:#fff;
+    text-shadow:0 1px 0 rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.6);
+  }
+  .perkbadge.rows{background:#e82f2f;} .perkbadge.symbols{background:#c916c9;} .perkbadge.spins{background:#1f6fd9;}
+  #fl-total-banner{
+    width:100%;max-width:430px;text-align:center;margin-bottom:4px;
+    background:linear-gradient(180deg,#5c1010,#3d0202);border:2px solid #d98a1f;border-radius:10px;
+    padding:3px;font-size:12px;color:#ff9bff;font-weight:900;letter-spacing:1px;
+  }
+  #fl-total-banner b{display:block;font-size:21px;color:#ffe95c;text-shadow:0 0 10px #ff8a00;}
+  #fl-wrap{display:flex;gap:6px;width:100%;max-width:430px;align-items:stretch;}
+  #fl-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:3px;flex:1;position:relative;
+    background:#1c0522;border:3px solid #a06c26;border-radius:12px;padding:5px;
+  }
+  .flcell{
+    aspect-ratio:1/0.9;border-radius:5px;background:#2b0930;border:1px solid #451040;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  }
+  .flcell.filled{border:1px solid #ffd23f55;background:radial-gradient(circle at 50% 40%,#3d1560,#220a3d);}
+  .flcell.landed{animation:landflash .5s ease-out;}
+  @keyframes landflash{0%{transform:scale(.3);background:#7a5fd9;}70%{transform:scale(1.12);}100%{transform:scale(1);}}
+  .flcell .sym{font-size:min(6.4vw,28px);line-height:1;}
+  .flcell .fval{
+    background:rgba(10,2,26,.85);border:1px solid #ffd23f;border-radius:7px;
+    color:#ffe95c;font-size:9px;font-weight:900;padding:0 4px;margin-top:1px;white-space:nowrap;
+  }
+  .flcell.jpfish .fval{border-color:#ff7bff;color:#ff9bff;}
+  .flcell.pluscell .fval{border-color:#4be8ff;color:#8fd4ff;}
+  #fl-man{
+    position:absolute;z-index:3;border-radius:10px;
+    background:radial-gradient(circle at 50% 35%,#3d6fa0cc,#122a4ccc);
+    border:3px solid #4be8ff;box-shadow:0 0 14px #4be8ff99,inset 0 0 20px #4be8ff44;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .5s ease;overflow:hidden;
+  }
+  #fl-man .face{line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6));}
+  #fl-side{
+    width:64px;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:linear-gradient(180deg,#3d1a02,#2b1002);border:2px solid #a06c26;border-radius:10px;padding:6px 2px;
+  }
+  #fl-side .tbadge{
+    background:radial-gradient(circle at 40% 30%,#ffd23f,#c9760c);border:2px solid #fff3b0;
+    border-radius:50%;width:44px;height:44px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1;
+  }
+  #fl-side .tbadge .e{font-size:18px;} #fl-side .tbadge .t{font-size:9px;font-weight:900;color:#5c2a06;}
+  #fl-progcol{flex:1;display:flex;flex-direction:column-reverse;align-items:center;gap:2px;min-height:60px;}
+  #fl-progcol .pfish{font-size:16px;line-height:1;}
+  #fl-need{font-size:9px;color:#ffd9a3;font-weight:900;text-align:center;}
+  #fl-multwrap{text-align:center;}
+  #fl-multwrap .l{font-size:8px;color:#8fd4ff;font-weight:900;}
+  #fl-mult{font-size:16px;color:#4be8ff;font-weight:900;}
+  #fl-status{margin-top:5px;font-size:12px;color:#d9b3ff;font-weight:900;min-height:16px;text-align:center;}
+  /* ---- Super Pick ---- */
+  #sp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:400px;margin-top:10px;}
+  .spcard{
+    aspect-ratio:1/1.15;border-radius:12px;cursor:pointer;position:relative;
+    transform-style:preserve-3d;transition:transform .45s;
+  }
+  .spcard .face{
+    position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  }
+  .spcard .back{
+    background:linear-gradient(135deg,#7a1fb8,#3a0a5e);border:2px solid #ffd23f;
+    font-size:30px;
+  }
+  .spcard .back::after{content:"?";position:absolute;font-size:34px;font-weight:900;color:#ffe95c;text-shadow:0 0 10px #ff8a00;}
+  .spcard .front{
+    background:linear-gradient(180deg,#2b0846,#1c0b3a);border:2px solid #b34ee8;
+    transform:rotateY(180deg);padding:4px;text-align:center;
+  }
+  .spcard.flip{transform:rotateY(180deg);}
+  .spcard.flip .back{opacity:0;transition:opacity .15s .2s;}
+  .spcard.reveal .back{opacity:0;transition:opacity .3s;}
+  .spcard.reveal .front{transform:none;}
+  .spcard.dim{opacity:.45;}
+  .spcard.chosen .front{border-color:#ffe95c;box-shadow:0 0 16px #ffd23f;}
+  .spcard .front .ic{font-size:26px;line-height:1;}
+  .spcard .front .tx{font-size:10px;font-weight:900;color:#ffe95c;line-height:1.15;}
+  /* ---- Big Win ---- */
+  #bigwin .ov-title{font-size:46px;}
+  #bw-amt{
+    font-size:38px;font-weight:900;color:#ffe95c;margin-top:10px;
+    text-shadow:0 0 20px #ff8a00,0 4px 0 #7a3a00;
+  }
+  .coinburst{position:absolute;font-size:22px;animation:coinfall linear forwards;pointer-events:none;}
+  @keyframes coinfall{from{transform:translateY(-40px) rotate(0);opacity:1;}to{transform:translateY(110vh) rotate(720deg);opacity:.7;}}
+  /* ---- Info modal ---- */
+  #info-body{max-height:60vh;overflow-y:auto;color:#fff;font-family:Arial,sans-serif;}
+  #info-body h3{color:#ffe95c;font-size:15px;margin:8px 0 4px;}
+  #info-body p,#info-body li{font-size:12.5px;line-height:1.45;color:#e8d9ff;}
+  #info-body ul{padding-left:18px;}
+  #info-body .hl{color:#ff9b4b;font-weight:900;}
+  #info-body .hl2{color:#ff7bff;font-weight:900;}
+  #info-nav{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:430px;margin-top:10px;}
+  .navarrow{
+    width:52px;height:40px;border-radius:12px;cursor:pointer;font-size:20px;font-weight:900;
+    background:linear-gradient(180deg,#8fff4b,#2fa50f);border:2px solid #d4ffb0;color:#fff;
+  }
+  #paylines-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .plmini{text-align:center;}
+  .plmini .num{font-size:10px;color:#ffe95c;font-weight:900;}
+  .plmini .g{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#0d0a33;padding:2px;border-radius:4px;}
+  .plmini .g i{aspect-ratio:1;border-radius:1px;background:#3a3568;}
+  .plmini .g i.on{background:#ffd23f;}
+  /* ---- Toast ---- */
+  #toast{
+    position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:40;
+    background:rgba(20,4,44,.95);border:2px solid #ffd23f;border-radius:14px;
+    padding:10px 18px;color:#ffe95c;font-size:15px;font-weight:900;text-align:center;
+    display:none;box-shadow:0 0 20px #ffd23f66;max-width:85%;
+  }
+  #refill{display:none;margin-top:8px;}
+</style>
+</head>
+<body>
+<div id="game">
+
+  <div id="topbar">
+    <div class="coinpill"><span class="coin">🪙</span><span id="balance">0</span></div>
+    <div class="topbtn buy" id="buybtn">BUY</div>
+    <div class="topbtn sale">SUPER<br>SALE</div>
+    <div class="topbtn lvl">LEVEL<br>DASH <span id="level">42</span></div>
+  </div>
+
+  <div id="jackpots">
+    <div id="grandbar">
+      <span class="glabel">GRAND</span>
+      <span id="grandval" class="locked">BET 360M TO UNLOCK</span>
+    </div>
+    <div class="jprow">
+      <div class="jp major"><div class="name">MAJOR</div><div class="val" id="jp-major"></div></div>
+      <div class="jp minor"><div class="name">MINOR</div><div class="val" id="jp-minor"></div></div>
+      <div class="jp mini"><div class="name">MINI</div><div class="val" id="jp-mini"></div></div>
+    </div>
+  </div>
+
+  <div id="scene">
+    <div id="boatrow">
+      <div id="boat" title="Golden fish progress">🛶<span class="goldfish">🐠</span>
+        <div id="goldmeter"><i></i></div>
+        <div id="goldcount" style="text-align:center">0/10</div>
+      </div>
+      <div id="superpick-sign"><div class="t">SUPER<br>PICK</div></div>
+    </div>
+    <div id="buckets">
+      <div class="bucket pink" data-b="pink">
+        <span class="cnt">0/10</span>
+        <span class="bicon fish-pink">🐟</span>
+        <div class="bname">EXTRA<br>SYMBOLS</div>
+        <div class="meter"><i></i></div>
+      </div>
+      <div class="bucket red" data-b="red">
+        <span class="cnt">0/10</span>
+        <span class="bicon fish-red">🐟</span>
+        <div class="bname">EXTRA<br>ROWS</div>
+        <div class="meter"><i></i></div>
+      </div>
+      <div class="bucket blue" data-b="blue">
+        <span class="cnt">0/10</span>
+        <span class="bicon fish-blue">🐟</span>
+        <div class="bname">EXTRA<br>SPINS</div>
+        <div class="meter"><i></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ticker"><span id="tickertext">COLLECT 🐟 FISH TO FILL BUCKETS — FULL BUCKET AWARDS FISH LINK! · COLLECT 🐠 GOLDEN FISH FOR SUPER PICK!</span></div>
+
+  <div id="reelframe">
+    <div id="reels"></div>
+    <div id="winpopup"><div class="amt" id="winamt"></div></div>
+  </div>
+
+  <div id="controls">
+    <div id="autobtn">AUTO ∞</div>
+    <div id="infobtn">i</div>
+    <div id="centercol">
+      <div id="totalwin-l">TOTAL WIN</div>
+      <div id="totalwin"></div>
+      <div id="betrow">
+        <div class="betbtn" id="betminus">−</div>
+        <div id="betwrap">
+          <div id="betval"></div>
+          <div id="bet-l">TOTAL BET</div>
+        </div>
+        <div class="betbtn" id="betplus">+</div>
+      </div>
+    </div>
+    <button id="maxbet">MAX<br>BET</button>
+    <button id="spinbtn"><span id="spinlabel">SPIN</span></button>
+  </div>
+  <div id="disclaimer">For entertainment only. Virtual coins have no cash value. Recreation inspired by social-casino fishing slots.</div>
+
+  <!-- FISH LINK -->
+  <div class="overlay" id="fishlink">
+    <div class="ov-title" style="font-size:28px">🎣 FISH LINK</div>
+    <div id="fl-head">
+      <div id="fl-spins"><b id="fl-spins-n">3</b> OF <b id="fl-spins-m">3</b> SPINS</div>
+      <div id="fl-perks"></div>
+    </div>
+    <div id="fl-total-banner">TOTAL WIN<b id="fl-total-v">0</b></div>
+    <div id="fl-wrap">
+      <div id="fl-grid"></div>
+      <div id="fl-side">
+        <div class="tbadge"><span class="e">🧔‍♂️</span><span class="t" id="fl-next">3×3</span></div>
+        <div id="fl-need"></div>
+        <div id="fl-progcol"></div>
+        <div class="tbadge"><span class="e">🧔‍♂️</span><span class="t" id="fl-cur">2×2</span></div>
+        <div id="fl-multwrap"><div class="l">MULT</div><div id="fl-mult">×1</div></div>
+      </div>
+    </div>
+    <div id="fl-status"></div>
+    <button class="ov-btn" id="fl-btn">START</button>
+  </div>
+
+  <!-- SUPER PICK -->
+  <div class="overlay" id="superpick">
+    <div class="ov-title" style="font-size:32px">✨ SUPER PICK</div>
+    <div style="color:#e8d9ff;font-size:12px;font-weight:900;margin-top:4px">PICK ONE CARD!</div>
+    <div id="sp-grid"></div>
+    <button class="ov-btn" id="sp-btn" style="visibility:hidden">COLLECT</button>
+  </div>
+
+  <!-- BIG WIN -->
+  <div class="overlay" id="bigwin">
+    <div class="ov-title" id="bw-title">BIG WIN</div>
+    <div id="bw-amt">0</div>
+    <button class="ov-btn" id="bw-btn">COLLECT</button>
+  </div>
+
+  <!-- INFO -->
+  <div class="overlay" id="infomodal">
+    <div class="ov-title" id="info-title" style="font-size:28px">FEATURE</div>
+    <div class="ov-panel"><div id="info-body"></div></div>
+    <div id="info-nav">
+      <button class="navarrow" id="info-prev">◀</button>
+      <button class="ov-btn" id="info-close" style="margin-top:0">BACK TO GAME</button>
+      <button class="navarrow" id="info-next">▶</button>
+    </div>
+  </div>
+
+  <div id="toast"><div id="toast-msg"></div><button class="ov-btn" id="refill" style="padding:6px 18px;font-size:14px">GET 10B FREE COINS</button></div>
+</div>
+
+<script>
+'use strict';
+/* =================== CONFIG =================== */
+const COLS=5, ROWS=4, TARGET=10;
+const BETS=[10e6,20e6,50e6,100e6,200e6,300e6,500e6,1e9,2e9,3e9];
+const GRAND_UNLOCK=360e6;
+const JP_BASE={GRAND:76868686243,MAJOR:15e9,MINOR:6e9,MINI:3e9};
+
+const SYM={
+  J:{letter:'J'}, Q:{letter:'Q'}, K:{letter:'K'}, A:{letter:'A'},
+  GLOVE:{e:'🧤'}, REEL:{e:'🎣'}, BOOT:{e:'🥾'}, TACKLE:{e:'🧰'}, BOAT:{e:'🚤'},
+  WILD:{e:'🧔‍♂️',wild:1},
+  FR:{e:'🐟',fish:'red'}, FP:{e:'🐟',fish:'pink'}, FB:{e:'🐟',fish:'blue'},
+  FG:{e:'🐠',fish:'gold'}
+};
+// line pays (x lineBet) for 3,4,5 of a kind — from the original PAYS table
+const PAY={
+  J:[2,10,25], Q:[2,10,25], K:[2,10,25], A:[2,10,25],
+  GLOVE:[5,20,50], REEL:[5,20,50], BOOT:[10,30,75], TACKLE:[10,50,100],
+  BOAT:[25,100,150], WILD:[25,100,150]
+};
+const BASE_WEIGHTS=[['J',14],['Q',14],['K',13],['A',13],['GLOVE',9],['REEL',9],['BOOT',7],['TACKLE',6],['BOAT',4],['WILD',2.2]];
+const FISH_CHANCE=0.085, GOLD_CHANCE=0.05;
+const FISH_COLOR_W=[['FR',40],['FP',33],['FB',27]];
+const FISH_MULTS=[[0.5,30],[1,24],[1.5,14],[2,10],[3,8],[5,6],[8,3.5],[10,2.5],[15,1.2],[25,0.6],[50,0.2]];
+const FL_MULTS=[1,1.5,2,3,4,5,6,8];
+
+const LINES=[
+ [0,0,0,0,0],[1,1,1,1,1],[2,2,2,2,2],[3,3,3,3,3],
+ [0,1,0,1,0],[1,0,1,0,1],[1,2,1,2,1],[2,1,2,1,2],[2,3,2,3,2],[3,2,3,2,3],
+ [0,1,2,1,0],[1,2,3,2,1],[3,2,1,2,3],[2,1,0,1,2],
+ [0,0,1,0,0],[1,1,2,1,1],[2,2,3,2,2],[3,3,2,3,3],[1,1,0,1,1],[2,2,1,2,2],
+ [0,1,1,1,0],[1,2,2,2,1],[2,3,3,3,2],[3,2,2,2,3],[1,0,0,0,1],[2,1,1,1,2],
+ [0,0,1,2,3],[3,3,2,1,0],[0,1,2,3,3],[3,2,1,0,0],
+ [0,2,0,2,0],[2,0,2,0,2],[1,3,1,3,1],[3,1,3,1,3],
+ [0,3,0,3,0],[3,0,3,0,3],
+ [0,0,2,0,0],[3,3,1,3,3],[1,1,3,1,1],[2,2,0,2,2],
+ [0,2,2,2,0],[3,1,1,1,3],[1,0,1,2,3],[2,3,2,1,0],
+ [0,3,3,3,0],[3,0,0,0,3],[1,2,1,0,1],[2,1,2,3,2],
+ [0,2,3,2,0],[3,1,0,1,3]
+];
+
+/* =================== STATE =================== */
+let S={
+  balance:35462695054,
+  betIdx:5,
+  buckets:{red:0,pink:0,blue:0,gold:0},
+  jp:{...JP_BASE},
+  level:42
+};
+try{
+  const saved=JSON.parse(localStorage.getItem('flf-save'));
+  if(saved && typeof saved.balance==='number') S=Object.assign(S,saved);
+}catch(e){}
+function save(){try{localStorage.setItem('flf-save',JSON.stringify(S));}catch(e){}}
+
+let grid=null;          // grid[c][r] = {k, val?}
+let busy=false, auto=false, skipReq=false;
+let overlayOpen=false;
+
+/* =================== HELPERS =================== */
+const $=id=>document.getElementById(id);
+const rnd=Math.random;
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+function pickW(pairs){
+  let t=0; for(const p of pairs) t+=p[1];
+  let x=rnd()*t;
+  for(const p of pairs){ x-=p[1]; if(x<=0) return p[0]; }
+  return pairs[pairs.length-1][0];
+}
+function fmt(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(n){
+  n=Math.round(n);
+  const u=[[1e12,'T'],[1e9,'B'],[1e6,'M'],[1e3,'K']];
+  for(const[v,s]of u){ if(n>=v){ let x=n/v; return (x>=100?Math.round(x):Math.round(x*10)/10)+s; } }
+  return ''+n;
+}
+const bet=()=>BETS[S.betIdx];
+const lineBet=()=>bet()/LINES.length;
+function fishValue(){ return bet()*pickW(FISH_MULTS); }
+
+/* =================== RENDER BASE UI =================== */
+function renderTop(){
+  $('balance').textContent=fmt(S.balance);
+  $('betval').textContent=fmt(bet());
+  $('jp-major').textContent=fmt(S.jp.MAJOR);
+  $('jp-minor').textContent=fmt(S.jp.MINOR);
+  $('jp-mini').textContent=fmt(S.jp.MINI);
+  const g=$('grandval');
+  if(bet()>=GRAND_UNLOCK){ g.classList.remove('locked'); g.textContent=fmt(S.jp.GRAND); }
+  else { g.classList.add('locked'); g.textContent='BET 360M TO UNLOCK'; }
+  $('level').textContent=S.level;
+}
+function renderBuckets(){
+  for(const col of ['pink','red','blue']){
+    const el=document.querySelector('.bucket.'+col);
+    el.querySelector('.cnt').textContent=S.buckets[col]+'/'+TARGET;
+    el.querySelector('.meter i').style.width=Math.min(100,S.buckets[col]/TARGET*100)+'%';
+  }
+  $('goldmeter').querySelector('i').style.width=Math.min(100,S.buckets.gold/TARGET*100)+'%';
+  $('goldcount').textContent=S.buckets.gold+'/'+TARGET;
+}
+function cellHTML(cell){
+  const d=SYM[cell.k];
+  if(d.letter) return `<span class="letter ${d.letter.toLowerCase()}">${d.letter}</span>`;
+  let h=`<span class="sym ${d.fish?'fish-'+d.fish:''}">${d.e}</span>`;
+  if(d.fish) h+=`<span class="fval">${abbr(cell.val)}</span>`;
+  if(d.wild) h+=`<span class="wtag">WILD</span>`;
+  return h;
+}
+function buildReels(){
+  const R=$('reels'); R.innerHTML='';
+  for(let c=0;c<COLS;c++){
+    const reel=document.createElement('div'); reel.className='reel'; reel.dataset.c=c;
+    for(let r=0;r<ROWS;r++){
+      const cell=document.createElement('div'); cell.className='cell'; cell.dataset.r=r;
+      cell.innerHTML=cellHTML(randCell(c));
+      reel.appendChild(cell);
+    }
+    R.appendChild(reel);
+  }
+}
+function setCell(c,r,cell){
+  const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
+  el.innerHTML=cellHTML(cell);
+  el.classList.toggle('wildcell', !!SYM[cell.k].wild);
+  return el;
+}
+
+/* =================== SPIN =================== */
+function randCell(c){
+  if(c===0 && rnd()<GOLD_CHANCE) return {k:'FG',val:fishValue()};
+  if(c>0 && rnd()<FISH_CHANCE) return {k:pickW(FISH_COLOR_W),val:fishValue()};
+  let k=pickW(BASE_WEIGHTS);
+  if(c===0 && k==='WILD') k='A'; // wild not on reel 1
+  return {k};
+}
+function genGrid(){
+  const g=[];
+  for(let c=0;c<COLS;c++){ g[c]=[]; for(let r=0;r<ROWS;r++) g[c][r]=randCell(c); }
+  return g;
+}
+async function animateReels(g){
+  skipReq=false;
+  const reels=[...document.querySelectorAll('.reel')];
+  reels.forEach(re=>re.classList.add('spinning'));
+  document.querySelectorAll('.cell').forEach(el=>el.classList.remove('win','wildcell','fishflash'));
+  const iv=setInterval(()=>{
+    reels.forEach(re=>{
+      if(!re.classList.contains('spinning'))return;
+      const c=+re.dataset.c;
+      [...re.children].forEach(cell=>{cell.innerHTML=cellHTML(randCell(c));cell.classList.remove('wildcell');});
+    });
+  },70);
+  for(let c=0;c<COLS;c++){
+    const t=skipReq?40:(380+c*230);
+    await waitSkip(t);
+    reels[c].classList.remove('spinning');
+    for(let r=0;r<ROWS;r++) setCell(c,r,g[c][r]);
+  }
+  clearInterval(iv);
+}
+function waitSkip(ms){
+  return new Promise(res=>{
+    const t0=Date.now();
+    const iv=setInterval(()=>{
+      if(skipReq||Date.now()-t0>=ms){clearInterval(iv);res();}
+    },25);
+  });
+}
+
+/* =================== EVALUATE =================== */
+function evaluate(g){
+  let lineWin=0; const winCells=new Set(); const lb=lineBet();
+  for(const line of LINES){
+    let base=null,count=0;
+    for(let c=0;c<COLS;c++){
+      const cell=g[c][line[c]]; const d=SYM[cell.k];
+      if(d.fish) break;
+      if(d.wild){count++;continue;}
+      if(base===null){base=cell.k;count++;}
+      else if(cell.k===base){count++;}
+      else break;
+    }
+    if(base===null&&count>0) base='WILD';
+    if(base&&count>=3){
+      lineWin+=PAY[base][count-3]*lb;
+      for(let c=0;c<count;c++) winCells.add(c+'_'+line[c]);
+    }
+  }
+  // fisherman wild collects all fish values
+  let fishWin=0,hasWild=false; const fishCells=[];
+  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
+    const cell=g[c][r];
+    if(SYM[cell.k].wild)hasWild=true;
+    if(SYM[cell.k].fish)fishCells.push([c,r,cell]);
+  }
+  if(hasWild) for(const[,,cell]of fishCells) fishWin+=cell.val;
+  return {lineWin,fishWin,winCells,fishCells,hasWild};
+}
+
+/* =================== WIN PRESENTATION =================== */
+async function showWin(amount){
+  if(amount<=0)return;
+  $('winamt').textContent='WIN '+abbr(amount);
+  $('winpopup').style.display='flex';
+  await countUp($('totalwin'),0,amount,Math.min(1200,400+amount/bet()*80));
+  await delay(500);
+  $('winpopup').style.display='none';
+}
+function countUp(el,from,to,dur){
+  return new Promise(res=>{
+    const t0=performance.now();
+    function step(t){
+      const p=Math.min(1,(t-t0)/dur);
+      el.textContent=fmt(from+(to-from)*p);
+      if(p<1)requestAnimationFrame(step);else res();
+    }
+    requestAnimationFrame(step);
+  });
+}
+async function bigWinCheck(amount,forceTitle){
+  const x=amount/bet();
+  if(x<10&&!forceTitle)return;
+  const title=forceTitle||(x>=60?'EPIC WIN':x>=30?'MEGA WIN':'BIG WIN');
+  $('bw-title').textContent=title;
+  $('bigwin').classList.add('show');overlayOpen=true;
+  burstCoins();
+  await countUp($('bw-amt'),0,amount,1600);
+  await new Promise(res=>{$('bw-btn').onclick=()=>{$('bigwin').classList.remove('show');overlayOpen=false;res();};});
+}
+function burstCoins(){
+  for(let i=0;i<26;i++){
+    const c=document.createElement('div');c.className='coinburst';c.textContent='🪙';
+    c.style.left=(rnd()*100)+'%';c.style.animationDuration=(1.4+rnd()*1.6)+'s';
+    c.style.animationDelay=(rnd()*0.8)+'s';
+    $('bigwin').appendChild(c);
+    setTimeout(()=>c.remove(),4000);
+  }
+}
+
+/* =================== FEATURES =================== */
+function collectFish(res){
+  const gained={red:0,pink:0,blue:0,gold:0};
+  for(const[c,r,cell]of res.fishCells){
+    const col=SYM[cell.k].fish; gained[col]++;
+    const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
+    if(el)el.classList.add('fishflash');
+  }
+  for(const col in gained) S.buckets[col]+=gained[col];
+  renderBuckets();
+}
+function checkTriggers(){
+  const q={perks:new Set(),superpick:false};
+  if(S.buckets.gold>=TARGET){S.buckets.gold-=TARGET;q.superpick=true;}
+  if(S.buckets.red>=TARGET){S.buckets.red-=TARGET;q.perks.add('rows');}
+  if(S.buckets.pink>=TARGET){S.buckets.pink-=TARGET;q.perks.add('symbols');}
+  if(S.buckets.blue>=TARGET){S.buckets.blue-=TARGET;q.perks.add('spins');}
+  renderBuckets();
+  return q;
+}
+
+/* ---------- FISH LINK ---------- */
+async function runFishLink(perks){
+  overlayOpen=true;
+  const rows=perks.has('rows')?8:5;
+  const baseSpins=perks.has('spins')?4:3;
+  const landCh=0.13+(perks.has('symbols')?0.07:0);
+  const needs=rows===8?[5,4,3,3,3,3]:[5,4,3];   // progress needed to reach size 3,4,5,(6,7,8)
+  const maxSize=2+needs.length;
+  let size=2, cells=Array(rows*COLS).fill(null); // null | 'OCC' | fish object
+  let spins=baseSpins,maxSeen=baseSpins,prog=0,banked=0,jackpotWon=0;
+
+  const ov=$('fishlink'),gridEl=$('fl-grid');
+  $('fl-perks').innerHTML=[...perks].map(p=>`<span class="perkbadge ${p}">${
+    p==='rows'?'EXTRA ROWS 8×5':p==='symbols'?'EXTRA SYMBOLS ×2':'EXTRA SPINS +1'}</span>`).join('')||'<span class="perkbadge" style="background:#7a1fb8">CLASSIC 5×5</span>';
+  gridEl.innerHTML='';
+  for(let i=0;i<rows*COLS;i++){const d=document.createElement('div');d.className='flcell';gridEl.appendChild(d);}
+  const flcells=[...gridEl.children];
+  const man=document.createElement('div');man.id='fl-man';
+  man.innerHTML='<span class="face">🧔‍♂️</span>';
+  gridEl.appendChild(man);
+
+  const tierName=s=>s<=5?`${s}×${s}`:`${s}×5`;
+  function manRect(){
+    const h=Math.min(size,rows),w=Math.min(size,COLS);
+    return {r0:Math.floor((rows-h)/2),c0:Math.floor((COLS-w)/2),h,w};
+  }
+  function applyOcc(){ // occupy cells under the fisherman, absorbing any fish values
+    const{r0,c0,h,w}=manRect();
+    for(let r=r0;r<r0+h;r++)for(let c=c0;c<c0+w;c++){
+      const i=r*COLS+c, cc=cells[i];
+      if(cc&&cc!=='OCC'&&cc.val)banked+=cc.val;
+      cells[i]='OCC';flcells[i].className='flcell';flcells[i].innerHTML='';
+    }
+  }
+  function positionMan(){
+    const{r0,c0,h,w}=manRect();
+    const a=flcells[r0*COLS+c0],b=flcells[(r0+h-1)*COLS+(c0+w-1)];
+    const g=gridEl.getBoundingClientRect(),ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+    man.style.left=(ra.left-g.left)+'px';man.style.top=(ra.top-g.top)+'px';
+    man.style.width=(rb.right-ra.left)+'px';man.style.height=(rb.bottom-ra.top)+'px';
+    man.querySelector('.face').style.fontSize=Math.min(rb.right-ra.left,rb.bottom-ra.top)*0.58+'px';
+  }
+  function drawCell(i,landed){
+    const c=cells[i],el=flcells[i];
+    if(!c||c==='OCC'){el.className='flcell';el.innerHTML='';return;}
+    el.className='flcell filled'+(landed?' landed':'')+(c.jp?' jpfish':'')+(c.plus?' pluscell':'');
+    if(c.prog) el.innerHTML=`<span class="sym fish-pink">🐟</span><span class="fval">BONUS</span>`;
+    else if(c.plus) el.innerHTML=`<span class="sym">🪙</span><span class="fval">+1 SPIN</span>`;
+    else el.innerHTML=`<span class="sym ${c.gold?'fish-gold':'fish-'+c.col}">${c.gold?'🐠':'🐟'}</span><span class="fval">${c.jp?'MINI '+abbr(c.val):abbr(c.val)+(c.dbl?' ×2':'')}</span>`;
+  }
+  function sumCells(){let t=0;for(const c of cells)if(c&&c!=='OCC'&&c.val)t+=c.val;return t;}
+  function updHud(){
+    $('fl-spins-n').textContent=spins;$('fl-spins-m').textContent=maxSeen;
+    $('fl-cur').textContent=tierName(size);
+    $('fl-next').textContent=size<maxSize?tierName(size+1):'MAX';
+    const need=size<maxSize?needs[size-2]:0;
+    $('fl-need').textContent=need?prog+'/'+need:'MAX!';
+    $('fl-progcol').innerHTML='<span class="pfish fish-pink">🐟</span>'.repeat(Math.min(prog,6));
+    $('fl-mult').textContent='×'+FL_MULTS[size-2];
+    $('fl-total-v').textContent=fmt(banked+sumCells());
+  }
+  function newFish(){
+    let r=rnd();
+    if(perks.has('spins')){if(r<0.07)return{plus:1};r=(r-0.07)/0.93;}
+    if(r<0.12)return{prog:1};
+    if(r<0.145)return{gold:1,jp:1,val:S.jp.MINI};
+    const col=pickW([['red',34],['pink',33],['blue',33]]);
+    let val=fishValue(),dbl=false;
+    if(perks.has('symbols')&&rnd()<0.25){val*=2;dbl=true;}
+    return{col,val,dbl};
+  }
+  function tryUpgrade(){
+    let upgraded=false;
+    while(size<maxSize&&prog>=needs[size-2]){
+      prog-=needs[size-2];size++;spins++;maxSeen=Math.max(maxSeen,spins);
+      applyOcc();positionMan();upgraded=true;
+    }
+    if(upgraded)$('fl-status').textContent='🎉 FISHERMAN GREW TO '+tierName(size)+'! +1 SPIN — mult ×'+FL_MULTS[size-2];
+    return upgraded;
+  }
+
+  // set up board
+  applyOcc();
+  {// seed fish on free cells
+    const free=[];cells.forEach((c,i)=>{if(!c)free.push(i);});
+    for(let n=0;n<4&&free.length;n++){
+      const i=free.splice(Math.floor(rnd()*free.length),1)[0];
+      cells[i]={col:pickW([['red',34],['pink',33],['blue',33]]),val:fishValue()};
+    }
+  }
+  cells.forEach((c,i)=>drawCell(i,false));
+  updHud();
+  $('fl-status').textContent='Fish stick where they land — any new fish resets your spins!';
+  ov.classList.add('show');
+  requestAnimationFrame(positionMan);
+
+  await new Promise(res=>{$('fl-btn').textContent='START';$('fl-btn').style.visibility='visible';$('fl-btn').onclick=res;});
+  $('fl-btn').style.visibility='hidden';
+  positionMan();
+
+  while(spins>0){
+    await delay(650);
+    const landed=[];
+    for(let i=0;i<cells.length;i++){
+      if(cells[i])continue;
+      if(rnd()<landCh){cells[i]=newFish();landed.push(i);}
+    }
+    let upgraded=false;
+    for(const i of landed){
+      drawCell(i,true);
+      if(cells[i]==='OCC'||!cells[i])continue;
+      if(cells[i].prog){prog++;}
+      if(cells[i].plus){spins++;maxSeen=Math.max(maxSeen,spins);}
+    }
+    if(prog>0)upgraded=tryUpgrade();
+    if(landed.length)spins=Math.max(spins,baseSpins);
+    else spins--;
+    updHud();
+    if(!landed.length)$('fl-status').textContent='No new fish…';
+    else if(!upgraded)$('fl-status').textContent='+'+landed.length+' caught! Spins reset.';
+    if(cells.every(c=>c)){ // FULL GRID!
+      const unlocked=bet()>=GRAND_UNLOCK;
+      jackpotWon=unlocked?S.jp.GRAND:S.jp.MAJOR;
+      $('fl-status').textContent='🌊 FULL GRID! '+(unlocked?'GRAND':'MAJOR')+' JACKPOT WON!';
+      if(unlocked)S.jp.GRAND=JP_BASE.GRAND;else S.jp.MAJOR=JP_BASE.MAJOR;
+      break;
+    }
+    await delay(350);
+  }
+  const mult=FL_MULTS[size-2];
+  const caught=banked+sumCells();
+  const final=Math.round(caught*mult)+jackpotWon;
+  $('fl-status').textContent=`Fisherman collects ${abbr(caught)} × ${mult}`+(jackpotWon?` + JACKPOT ${abbr(jackpotWon)}`:'')+` = ${abbr(final)}`;
+  await countUp($('fl-total-v'),caught,final,1400);
+  await new Promise(res=>{$('fl-btn').textContent='COLLECT';$('fl-btn').style.visibility='visible';$('fl-btn').onclick=res;});
+  $('fl-btn').style.visibility='hidden';
+  ov.classList.remove('show');overlayOpen=false;
+  S.balance+=final;renderTop();save();
+  await bigWinCheck(final,jackpotWon?(bet()>=GRAND_UNLOCK?'GRAND JACKPOT':'MAJOR JACKPOT'):null);
+  return final;
+}
+
+/* ---------- SUPER PICK ---------- */
+function spRewards(){
+  const b=bet();
+  return shuffle([
+    {t:'jackpot',tier:'MINI',ic:'💗',tx:'MINI JACKPOT'},
+    {t:'jackpot',tier:'MINOR',ic:'💙',tx:'MINOR JACKPOT'},
+    {t:'amount',v:b*1,ic:'🪙',tx:abbr(b)+' COINS'},
+    {t:'amount',v:b*2,ic:'🪙',tx:abbr(b*2)+' COINS'},
+    {t:'amount',v:b*3,ic:'💰',tx:abbr(b*3)+' COINS'},
+    {t:'amount',v:b*5,ic:'💰',tx:abbr(b*5)+' COINS'},
+    {t:'amount',v:b*8,ic:'💎',tx:abbr(b*8)+' COINS'},
+    {t:'fishlink',ic:'🐠',tx:'FISH LINK'},
+    {t:'spin',ic:'🎁',tx:'FISH LINK +1 SPIN'},
+    {t:'bucket',n:1,ic:'🪣',tx:'1 BUCKET FISH LINK'},
+    {t:'bucket',n:2,ic:'🪣🪣',tx:'2 BUCKETS FISH LINK'},
+    {t:'bucket',n:3,ic:'🪣🪣🪣',tx:'3 BUCKETS FISH LINK'}
+  ]);
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+async function runSuperPick(){
+  overlayOpen=true;
+  const rewards=spRewards();
+  const g=$('sp-grid');g.innerHTML='';
+  $('superpick').classList.add('show');
+  const chosen=await new Promise(res=>{
+    rewards.forEach((rw,i)=>{
+      const card=document.createElement('div');card.className='spcard';
+      card.innerHTML=`<div class="face back"></div><div class="face front"><div class="ic">${rw.ic}</div><div class="tx">${rw.tx}</div></div>`;
+      card.onclick=()=>{
+        if(g.dataset.done)return;g.dataset.done=1;
+        card.classList.add('flip','chosen');
+        setTimeout(()=>{
+          [...g.children].forEach((c2,j)=>{if(j!==i){c2.classList.add('reveal','dim');}});
+        },500);
+        setTimeout(()=>res(rw),1100);
+      };
+      g.appendChild(card);
+    });
+  });
+  await new Promise(res=>{
+    const b=$('sp-btn');b.style.visibility='visible';
+    b.textContent=chosen.t==='amount'||chosen.t==='jackpot'?'COLLECT':'CONTINUE';
+    b.onclick=()=>{b.style.visibility='hidden';res();};
+  });
+  $('superpick').classList.remove('show');delete $('sp-grid').dataset.done;
+  overlayOpen=false;
+  // apply
+  if(chosen.t==='jackpot'){
+    const v=S.jp[chosen.tier];S.jp[chosen.tier]=JP_BASE[chosen.tier];
+    S.balance+=v;renderTop();save();
+    await bigWinCheck(v,chosen.tier+' JACKPOT');
+  }else if(chosen.t==='amount'){
+    S.balance+=chosen.v;renderTop();save();
+    toast('🪙 +'+abbr(chosen.v)+' COINS!');
+    await bigWinCheck(chosen.v);
+  }else if(chosen.t==='fishlink'){
+    await runFishLink(new Set());
+  }else if(chosen.t==='spin'){
+    await runFishLink(new Set(['spins']));
+  }else if(chosen.t==='bucket'){
+    const all=shuffle(['rows','symbols','spins']);
+    await runFishLink(new Set(all.slice(0,chosen.n)));
+  }
+}
+
+/* =================== TOAST =================== */
+let toastT=null;
+function toast(msg,ms=2200){
+  $('toast-msg').textContent=msg;
+  $('toast').style.display='block';$('refill').style.display='none';
+  clearTimeout(toastT);toastT=setTimeout(()=>$('toast').style.display='none',ms);
+}
+function offerRefill(){
+  $('toast-msg').textContent='Out of coins!';
+  $('toast').style.display='block';$('refill').style.display='inline-block';
+  clearTimeout(toastT);
+}
+$('refill').onclick=()=>{
+  S.balance+=10e9;renderTop();save();
+  $('toast').style.display='none';
+  toast('🪙 +10B FREE COINS!');
+};
+
+/* =================== MAIN SPIN FLOW =================== */
+async function spin(){
+  if(busy||overlayOpen)return;
+  if(S.balance<bet()){auto=false;updAutoUI();offerRefill();return;}
+  busy=true;updSpinUI(true);
+  S.balance-=bet();
+  // jackpots tick
+  for(const k in S.jp)S.jp[k]+=Math.round(bet()*(0.002+rnd()*0.004));
+  renderTop();
+  $('totalwin').textContent='';
+  grid=genGrid();
+  await animateReels(grid);
+  const res=evaluate(grid);
+  // highlight
+  for(const key of res.winCells){
+    const[c,r]=key.split('_');
+    const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
+    if(el)el.classList.add('win');
+  }
+  if(res.hasWild&&res.fishWin>0){
+    for(const[c,r]of res.fishCells.map(f=>[f[0],f[1]])){
+      const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
+      if(el)el.classList.add('win');
+    }
+  }
+  const total=Math.round(res.lineWin+res.fishWin);
+  if(total>0){
+    S.balance+=total;renderTop();
+    await showWin(total);
+  }
+  collectFish(res);
+  save();
+  if(total>0)await bigWinCheck(total);
+  // features
+  const q=checkTriggers();
+  if(q.superpick){
+    toast('🐠 GOLDEN BUCKET FULL — SUPER PICK!',1500);await delay(1400);
+    await runSuperPick();
+  }
+  if(q.perks.size>0){
+    toast('🎣 BUCKET FULL — FISH LINK!',1500);await delay(1400);
+    await runFishLink(q.perks);
+  }
+  save();renderTop();
+  busy=false;updSpinUI(false);
+  if(auto)setTimeout(()=>{if(auto&&!busy&&!overlayOpen)spin();},600);
+}
+function updSpinUI(spinning){
+  $('spinlabel').innerHTML=spinning?'STOP':(auto?'STOP<br><span class="inf">∞</span>':'SPIN');
+  $('spinbtn').classList.toggle('stop',spinning&&!auto);
+}
+function updAutoUI(){
+  $('autobtn').classList.toggle('on',auto);
+  $('autobtn').textContent=auto?'AUTO ON ∞':'AUTO ∞';
+  updSpinUI(busy);
+}
+
+/* =================== CONTROLS =================== */
+$('spinbtn').onclick=()=>{
+  if(busy){skipReq=true;return;}
+  if(auto){auto=false;updAutoUI();return;}
+  spin();
+};
+$('autobtn').onclick=()=>{auto=!auto;updAutoUI();if(auto&&!busy&&!overlayOpen)spin();};
+$('betminus').onclick=()=>{if(busy)return;S.betIdx=Math.max(0,S.betIdx-1);renderTop();save();};
+$('betplus').onclick=()=>{if(busy)return;S.betIdx=Math.min(BETS.length-1,S.betIdx+1);renderTop();save();};
+$('maxbet').onclick=()=>{if(busy)return;S.betIdx=BETS.length-1;renderTop();save();};
+$('buybtn').onclick=()=>{S.balance+=10e9;renderTop();save();toast('🪙 +10B COINS PURCHASED! (free in this recreation)');};
+
+/* =================== INFO MODAL =================== */
+const INFO_PAGES=[
+ {title:'FEATURE',html:`
+  <ul>
+   <li><span class="fish-red">🐟</span> <span class="fish-pink">🐟</span> <span class="fish-blue">🐟</span> money fish only appear on reels <b>2–5</b> during the base game, each carrying a coin value.</li>
+   <li>After collecting <span class="fish-red">🐟</span> red fish to the red bucket, you trigger <span class="hl">FISH LINK</span> with <span class="hl">EXTRA ROWS</span> (8×5 grid).</li>
+   <li>After collecting <span class="fish-pink">🐟</span> pink fish to the purple bucket, you trigger <span class="hl">FISH LINK</span> with <span class="hl2">EXTRA SYMBOLS</span> (more fish land).</li>
+   <li>After collecting <span class="fish-blue">🐟</span> blue fish to the blue bucket, you trigger <span class="hl">FISH LINK</span> with <span class="hl">EXTRA SPINS</span> (start with 4).</li>
+   <li>🧔‍♂️ <b>WILD</b> fisherman substitutes for all pay symbols and <b>collects every money fish on screen</b> when he lands!</li>
+   <li><span class="fish-gold">🐠</span> golden fish only appears on <b>reel 1</b>. Collect it to the boat to trigger <span class="hl">SUPER PICK</span>.</li>
+   <li>Each bucket needs <b>10</b> fish to trigger its feature.</li>
+  </ul>`},
+ {title:'SUPER PICK',html:`
+  <ul>
+   <li>After collecting <span class="fish-gold">🐠</span> to the boat, you trigger <span class="hl">SUPER PICK</span>.</li>
+   <li>There are <b>12 cards</b> in total. Pick one:</li>
+   <li>💗💙 <b>JACKPOT</b>: instantly awards the MINI or MINOR jackpot.</li>
+   <li>🪙💰💎 <b>Amount</b>: coins collected immediately (1×–8× bet).</li>
+   <li>🐠 <b>Fish Link</b>: enter FISH LINK immediately.</li>
+   <li>🎁 <b>+1 Spin</b>: FISH LINK with an extra respin.</li>
+   <li>🪣 <b>Buckets ×1/×2/×3</b>: FISH LINK with 1, 2 or all 3 bucket perks active at once!</li>
+  </ul>`},
+ {title:'FISH LINK',html:`
+  <p>A hold-and-win respin feature: money fish stick where they land, and any new fish resets your spins.</p>
+  <ul>
+   <li>Grid is <b>5×5</b>, upgraded to <b>8×5</b> with the EXTRA ROWS perk.</li>
+   <li>The 🧔‍♂️ fisherman sits on the board. Collect <span class="fish-pink">🐟</span> <b>bonus fish</b> to grow him: 2×2 → 3×3 → 4×4 → 5×5 (→ up to 8×5). Each upgrade awards <b>+1 spin</b>, absorbs the fish beneath him, and raises the final <b>multiplier</b>.</li>
+   <li>Progress needed per tier: 5, 4, 3 (then 3, 3, 3 on the 8×5 grid).</li>
+   <li><span class="hl2">EXTRA SYMBOLS</span>: fish may appear in <b>double bonus form</b> worth ×2!</li>
+   <li><span class="hl">EXTRA SPINS</span>: 🪙 <b>+1 SPIN</b> coins may land, increasing your spin count.</li>
+   <li>Golden <span class="fish-gold">🐠</span> jackpot fish are worth the current <b>MINI</b> jackpot.</li>
+   <li>Fill <b>every cell</b> to win the <span class="hl">GRAND JACKPOT</span> (bet 360M+ to unlock; otherwise MAJOR)!</li>
+   <li>At the end, the fisherman collects all fish values × his multiplier.</li>
+  </ul>`},
+ {title:'PAYS',html:`
+  <p>Wins pay left to right on a payline, 3+ of a kind. Values are × line bet (total bet ÷ 50).</p>
+  <ul>
+   <li>🚤 <b>Boat</b> — 5: 150 · 4: 100 · 3: 25</li>
+   <li>🧔‍♂️ <b>Wild</b> — pays as the boat and substitutes for all pay symbols</li>
+   <li>🧰 <b>Tackle box</b> — 5: 100 · 4: 50 · 3: 10</li>
+   <li>🥾 <b>Boots</b> — 5: 75 · 4: 30 · 3: 10</li>
+   <li>🎣 <b>Reel</b> — 5: 50 · 4: 20 · 3: 5</li>
+   <li>🧤 <b>Gloves</b> — 5: 50 · 4: 20 · 3: 5</li>
+   <li><b>A / K / Q / J</b> — 5: 25 · 4: 10 · 3: 2</li>
+  </ul>`},
+ {title:'PAYLINES',html:''} // generated
+];
+let infoPage=0;
+function renderInfo(){
+  const p=INFO_PAGES[infoPage];
+  $('info-title').textContent=p.title;
+  if(p.title==='PAYLINES'){
+    let h='<div id="paylines-grid">';
+    LINES.forEach((ln,i)=>{
+      h+=`<div class="plmini"><div class="num">${i+1}</div><div class="g">`;
+      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
+        h+=`<i class="${ln[c]===r?'on':''}"></i>`;
+      h+='</div></div>';
+    });
+    h+='</div><p style="margin-top:8px">50 paylines, paid left to right. 3+ matching symbols on a line win. Line bet = total bet ÷ 50.</p>';
+    $('info-body').innerHTML=h;
+  }else $('info-body').innerHTML=p.html;
+}
+$('infobtn').onclick=()=>{infoPage=0;renderInfo();$('infomodal').classList.add('show');overlayOpen=true;};
+$('info-close').onclick=()=>{$('infomodal').classList.remove('show');overlayOpen=false;};
+$('info-prev').onclick=()=>{infoPage=(infoPage+INFO_PAGES.length-1)%INFO_PAGES.length;renderInfo();};
+$('info-next').onclick=()=>{infoPage=(infoPage+1)%INFO_PAGES.length;renderInfo();};
+
+/* =================== INIT =================== */
+buildReels();renderTop();renderBuckets();
+$('totalwin').textContent='';
+// debug hooks (used by automated tests)
+window.FLF={spin,runFishLink,runSuperPick,S,evaluate,genGrid,get busy(){return busy;},LINES,BETS};
+</script>
+</body>
+</html>
