@@ -347,6 +347,8 @@
   .spcard.flip .back{opacity:0;transition:opacity .15s .2s;}
   .spcard.reveal .back{opacity:0;transition:opacity .3s;}
   .spcard.reveal .front{transform:none;}
+  .spcard .back.noq::after{content:none;}
+  .spcard .front.artfront .tx{color:#6e3407;text-shadow:0 1px 0 rgba(255,255,255,.45);}
   .spcard.dim{opacity:.45;}
   .spcard.chosen .front{border-color:#ffe95c;box-shadow:0 0 16px #ffd23f;}
   .spcard .front .ic{font-size:26px;line-height:1;}
@@ -468,7 +470,7 @@
 
   <!-- FISH LINK -->
   <div class="overlay" id="fishlink">
-    <div class="ov-title" style="font-size:28px">🎣 FISH LINK</div>
+    <div class="ov-title" id="fl-title" style="font-size:28px">🎣 FISH LINK</div>
     <div id="fl-head">
       <div id="fl-spins"><b id="fl-spins-n">3</b> OF <b id="fl-spins-m">3</b> SPINS</div>
       <div id="fl-perks"></div>
@@ -490,7 +492,7 @@
 
   <!-- SUPER PICK -->
   <div class="overlay" id="superpick">
-    <div class="ov-title" style="font-size:32px">✨ SUPER PICK</div>
+    <div class="ov-title" id="sp-title" style="font-size:32px">✨ SUPER PICK</div>
     <div style="color:#e8d9ff;font-size:12px;font-weight:900;margin-top:4px">PICK ONE CARD!</div>
     <div id="sp-grid"></div>
     <button class="ov-btn" id="sp-btn" style="visibility:hidden">COLLECT</button>
@@ -498,6 +500,7 @@
 
   <!-- BIG WIN -->
   <div class="overlay" id="bigwin">
+    <img id="bw-celeb" style="display:none;max-height:34vh;max-width:80%;-webkit-mask-image:linear-gradient(180deg,#000 72%,transparent 99%);mask-image:linear-gradient(180deg,#000 72%,transparent 99%)" alt="">
     <div class="ov-title" id="bw-title">BIG WIN</div>
     <div id="bw-amt">0</div>
     <button class="ov-btn" id="bw-btn">COLLECT</button>
@@ -545,18 +548,54 @@ const ASSET_FILES={
   J:'sym_j.png',Q:'sym_q.png',K:'sym_k.png',A:'sym_a.png',
   GLOVE:'sym_gloves.png',REEL:'sym_reel.png',BOOT:'sym_boots.png',
   TACKLE:'sym_tackle.png',BOAT:'sym_boat.png',WILD:'sym_wild.png',
-  FR:'fish_red.png',FP:'fish_pink.png',FB:'fish_blue.png',FG:'fish_gold.png'
+  FR:'fish_red.png',FP:'fish_pink.png',FB:'fish_blue.png',FG:'fish_gold.png',
+  FRD:'fish_red_double.png',FPD:'fish_pink_double.png',FBD:'fish_blue_double.png',
+  FLM:'fl_fisherman.png',FLMC:'fl_fisherman_celebrate.png',
+  FLICE:'fl_frame_ice.png',FLBOARD:'fl_board_frame.png',FLBADGE:'fl_tier_badge.png',
+  FLCS:'fl_coin_silver.png',FLCG:'fl_coin_gold.png',FLPLUS:'fl_coin_plusspin.png',FLBONUS:'fl_fish_bonus.png',
+  WA_BIG:'wa_bigwin.png',WA_MEGA:'wa_megawin.png',WA_EPIC:'wa_epicwin.png',
+  WA_FL:'wa_fishlink.png',WA_SP:'wa_superpick.png',LOGO:'logo_game.png',CELEB:'celebrate_fisherman.png',
+  UI_BUY:'btn_buy.png',UI_SALE:'btn_supersale.png',UI_COIN:'icon_coin.png',
+  UI_PILLBAL:'pill_balance.png',UI_PLAQUE:'plaque_jackpot.png',UI_PILLSPINS:'pill_spins.png',
+  UI_CARDBACK:'card_back.png',UI_CARDFRONT:'card_front.png'
 };
 const LOADED={};
+const artImg=(k,cls='symimg')=>LOADED[k]?`<img class="${cls}" src="${LOADED[k]}" alt="">`:null;
 function preloadAssets(){
   let pending=Object.keys(ASSET_FILES).length;
-  const done=()=>{if(--pending===0&&!busy){if(grid){for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++)setCell(c,r,grid[c][r]);}else buildReels();}};
+  const done=()=>{
+    if(--pending===0){
+      applyUIArt();
+      if(!busy){if(grid){for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++)setCell(c,r,grid[c][r]);}else buildReels();}
+    }
+  };
   for(const k in ASSET_FILES){
     const im=new Image();
     im.onload=()=>{LOADED[k]=ASSET_DIR+ASSET_FILES[k];done();};
     im.onerror=done;
     im.src=ASSET_DIR+ASSET_FILES[k];
   }
+}
+function applyUIArt(){
+  if(LOADED.UI_COIN)document.querySelector('.coinpill .coin').innerHTML=
+    `<img src="${LOADED.UI_COIN}" style="width:18px;height:18px;display:block">`;
+  if(LOADED.UI_PILLBAL){const p=document.querySelector('.coinpill');
+    p.style.background=`url(${LOADED.UI_PILLBAL}) center/100% 100% no-repeat`;p.style.border='none';}
+  if(LOADED.UI_BUY){const b=$('buybtn');b.textContent='';
+    b.style.cssText+=`;background:url(${LOADED.UI_BUY}) center/contain no-repeat;border:none;width:66px;height:36px;padding:0;`;}
+  if(LOADED.UI_SALE){const s=document.querySelector('.topbtn.sale');s.textContent='';
+    s.style.cssText+=`;background:url(${LOADED.UI_SALE}) center/contain no-repeat;border:none;width:66px;height:36px;padding:0;`;}
+  if(LOADED.UI_PLAQUE)document.querySelectorAll('.jp').forEach(el=>{
+    el.style.background=`url(${LOADED.UI_PLAQUE}) center/100% 100% no-repeat`;el.style.border='none';});
+  // buckets + boat use the money-fish art
+  const bmap={pink:'FP',red:'FR',blue:'FB'};
+  for(const col in bmap){
+    if(!LOADED[bmap[col]])continue;
+    document.querySelector(`.bucket.${col} .bicon`).outerHTML=
+      `<img class="bicon" src="${LOADED[bmap[col]]}" style="width:38px;height:34px;object-fit:contain;display:block;margin:0 auto">`;
+  }
+  if(LOADED.FG)document.querySelector('#boat .goldfish').outerHTML=
+    `<img class="goldfish" src="${LOADED.FG}" style="position:absolute;top:-14px;left:6px;width:26px;filter:drop-shadow(0 0 4px #ffd23f)">`;
 }
 const FISH_CHANCE=0.085, GOLD_CHANCE=0.05;
 const FISH_COLOR_W=[['FR',40],['FP',33],['FB',27]];
@@ -766,7 +805,12 @@ async function bigWinCheck(amount,forceTitle){
   const x=amount/bet();
   if(x<10&&!forceTitle)return;
   const title=forceTitle||(x>=60?'EPIC WIN':x>=30?'MEGA WIN':'BIG WIN');
-  $('bw-title').textContent=title;
+  const artKey={'BIG WIN':'WA_BIG','MEGA WIN':'WA_MEGA','EPIC WIN':'WA_EPIC'}[title];
+  $('bw-title').innerHTML=(artKey&&LOADED[artKey])
+    ?`<img src="${LOADED[artKey]}" style="max-width:82vw;max-height:26vh">`:title;
+  const celeb=$('bw-celeb');
+  if(LOADED.CELEB&&(forceTitle||x>=30)){celeb.src=LOADED.CELEB;celeb.style.display='block';}
+  else celeb.style.display='none';
   $('bigwin').classList.add('show');overlayOpen=true;
   burstCoins();
   await countUp($('bw-amt'),0,amount,1600);
@@ -774,7 +818,8 @@ async function bigWinCheck(amount,forceTitle){
 }
 function burstCoins(){
   for(let i=0;i<26;i++){
-    const c=document.createElement('div');c.className='coinburst';c.textContent='🪙';
+    const c=document.createElement('div');c.className='coinburst';
+    if(LOADED.UI_COIN)c.innerHTML=`<img src="${LOADED.UI_COIN}" style="width:26px">`;else c.textContent='🪙';
     c.style.left=(rnd()*100)+'%';c.style.animationDuration=(1.4+rnd()*1.6)+'s';
     c.style.animationDelay=(rnd()*0.8)+'s';
     $('bigwin').appendChild(c);
@@ -815,14 +860,30 @@ async function runFishLink(perks){
   let spins=baseSpins,maxSeen=baseSpins,prog=0,banked=0,jackpotWon=0;
 
   const ov=$('fishlink'),gridEl=$('fl-grid');
+  $('fl-title').innerHTML=LOADED.WA_FL?`<img src="${LOADED.WA_FL}" style="height:64px">`:'🎣 FISH LINK';
+  if(LOADED.UI_PILLSPINS){const sp=$('fl-spins');
+    sp.style.cssText+=`;background:url(${LOADED.UI_PILLSPINS}) center/100% 100% no-repeat;border:none;color:#fff;padding:6px 18px;`;
+    sp.querySelectorAll('b').forEach(b=>b.style.color='#ffe95c');}
   $('fl-perks').innerHTML=[...perks].map(p=>`<span class="perkbadge ${p}">${
     p==='rows'?'EXTRA ROWS 8×5':p==='symbols'?'EXTRA SYMBOLS ×2':'EXTRA SPINS +1'}</span>`).join('')||'<span class="perkbadge" style="background:#7a1fb8">CLASSIC 5×5</span>';
   gridEl.innerHTML='';
   for(let i=0;i<rows*COLS;i++){const d=document.createElement('div');d.className='flcell';gridEl.appendChild(d);}
   const flcells=[...gridEl.children];
+  if(LOADED.FLBOARD){
+    // 9-slice the wooden frame art (inner window: x 161-863, y 274-1317 of 1024x1500)
+    gridEl.style.border='24px solid transparent';
+    gridEl.style.borderImage=`url(${LOADED.FLBOARD}) 274 161 183 161 stretch`;
+    gridEl.style.borderRadius='0';
+  }
   const man=document.createElement('div');man.id='fl-man';
-  man.innerHTML='<span class="face">🧔‍♂️</span>';
+  man.innerHTML=LOADED.FLM?`<img class="face" src="${LOADED.FLM}" alt="">`:'<span class="face">🧔‍♂️</span>';
+  if(LOADED.FLICE){man.style.background=`url(${LOADED.FLICE}) center/100% 100% no-repeat`;man.style.border='none';man.style.boxShadow='none';}
   gridEl.appendChild(man);
+  // sidebar art
+  document.querySelectorAll('#fl-side .tbadge').forEach(tb=>{
+    const e=tb.querySelector('.e');
+    if(LOADED.FLBADGE)e.innerHTML=`<img src="${LOADED.FLBADGE}" style="width:26px;height:26px;display:block">`;
+  });
 
   const tierName=s=>s<=5?`${s}×${s}`:`${s}×5`;
   function manRect(){
@@ -843,17 +904,25 @@ async function runFishLink(perks){
     const g=gridEl.getBoundingClientRect(),ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
     man.style.left=(ra.left-g.left)+'px';man.style.top=(ra.top-g.top)+'px';
     man.style.width=(rb.right-ra.left)+'px';man.style.height=(rb.bottom-ra.top)+'px';
-    man.querySelector('.face').style.fontSize=Math.min(rb.right-ra.left,rb.bottom-ra.top)*0.58+'px';
+    const face=man.querySelector('.face');
+    if(face.tagName==='IMG'){face.style.width='82%';face.style.height='88%';face.style.objectFit='contain';}
+    else face.style.fontSize=Math.min(rb.right-ra.left,rb.bottom-ra.top)*0.58+'px';
+  }
+  function celebrateMan(){
+    const face=man.querySelector('.face');
+    if(face.tagName==='IMG'&&LOADED.FLMC){face.src=LOADED.FLMC;setTimeout(()=>{face.src=LOADED.FLM;},1400);}
   }
   function drawCell(i,landed){
     const c=cells[i],el=flcells[i];
     if(!c||c==='OCC'){el.className='flcell';el.innerHTML='';return;}
     el.className='flcell filled'+(landed?' landed':'')+(c.jp?' jpfish':'')+(c.plus?' pluscell':'');
-    if(c.prog) el.innerHTML=(LOADED.FP?`<img class="symimg" src="${LOADED.FP}" alt="">`:`<span class="sym fish-pink">🐟</span>`)+`<span class="fval">BONUS</span>`;
-    else if(c.plus) el.innerHTML=`<span class="sym">🪙</span><span class="fval">+1 SPIN</span>`;
+    if(c.prog) el.innerHTML=(artImg('FLBONUS')||artImg('FP')||`<span class="sym fish-pink">🐟</span>`)+`<span class="fval">BONUS</span>`;
+    else if(c.plus) el.innerHTML=(artImg('FLPLUS')||`<span class="sym">🪙</span>`)+`<span class="fval">+1 SPIN</span>`;
     else{
-      const key=c.gold?'FG':{red:'FR',pink:'FP',blue:'FB'}[c.col];
-      const icon=LOADED[key]?`<img class="symimg" src="${LOADED[key]}" alt="">`:`<span class="sym ${c.gold?'fish-gold':'fish-'+c.col}">${c.gold?'🐠':'🐟'}</span>`;
+      const fallbackKey=c.gold?'FG':{red:'FR',pink:'FP',blue:'FB'}[c.col];
+      const dblKey=c.dbl?{red:'FRD',pink:'FPD',blue:'FBD'}[c.col]:null;
+      const icon=(dblKey&&artImg(dblKey))||artImg(c.gold?'FLCG':'FLCS')||artImg(fallbackKey)||
+        `<span class="sym ${c.gold?'fish-gold':'fish-'+c.col}">${c.gold?'🐠':'🐟'}</span>`;
       el.innerHTML=icon+`<span class="fval">${c.jp?'MINI '+abbr(c.val):abbr(c.val)+(c.dbl?' ×2':'')}</span>`;
     }
   }
@@ -864,7 +933,9 @@ async function runFishLink(perks){
     $('fl-next').textContent=size<maxSize?tierName(size+1):'MAX';
     const need=size<maxSize?needs[size-2]:0;
     $('fl-need').textContent=need?prog+'/'+need:'MAX!';
-    $('fl-progcol').innerHTML='<span class="pfish fish-pink">🐟</span>'.repeat(Math.min(prog,6));
+    $('fl-progcol').innerHTML=(LOADED.FLBONUS
+      ?`<img class="pfish" src="${LOADED.FLBONUS}" style="width:20px">`
+      :'<span class="pfish fish-pink">🐟</span>').repeat(Math.min(prog,6));
     $('fl-mult').textContent='×'+FL_MULTS[size-2];
     $('fl-total-v').textContent=fmt(banked+sumCells());
   }
@@ -882,7 +953,7 @@ async function runFishLink(perks){
     let upgraded=false;
     while(size<maxSize&&prog>=needs[size-2]){
       prog-=needs[size-2];size++;spins++;maxSeen=Math.max(maxSeen,spins);
-      applyOcc();positionMan();upgraded=true;
+      applyOcc();positionMan();celebrateMan();upgraded=true;
     }
     if(upgraded)$('fl-status').textContent='🎉 FISHERMAN GREW TO '+tierName(size)+'! +1 SPIN — mult ×'+FL_MULTS[size-2];
     return upgraded;
@@ -972,11 +1043,14 @@ async function runSuperPick(){
   overlayOpen=true;
   const rewards=spRewards();
   const g=$('sp-grid');g.innerHTML='';
+  $('sp-title').innerHTML=LOADED.WA_SP?`<img src="${LOADED.WA_SP}" style="height:70px">`:'✨ SUPER PICK';
   $('superpick').classList.add('show');
+  const backStyle=LOADED.UI_CARDBACK?` style="background:url(${LOADED.UI_CARDBACK}) center/100% 100% no-repeat;border:none"`:'';
+  const frontStyle=LOADED.UI_CARDFRONT?` style="background:url(${LOADED.UI_CARDFRONT}) center/100% 100% no-repeat;border:none"`:'';
   const chosen=await new Promise(res=>{
     rewards.forEach((rw,i)=>{
       const card=document.createElement('div');card.className='spcard';
-      card.innerHTML=`<div class="face back"></div><div class="face front"><div class="ic">${rw.ic}</div><div class="tx">${rw.tx}</div></div>`;
+      card.innerHTML=`<div class="face back ${LOADED.UI_CARDBACK?'noq':''}"${backStyle}></div><div class="face front ${LOADED.UI_CARDFRONT?'artfront':''}"${frontStyle}><div class="ic">${rw.ic}</div><div class="tx">${rw.tx}</div></div>`;
       card.onclick=()=>{
         if(g.dataset.done)return;g.dataset.done=1;
         card.classList.add('flip','chosen');
@@ -1162,7 +1236,8 @@ function renderInfo(){
     });
     h+='</div><p style="margin-top:8px">50 paylines, paid left to right. 3+ matching symbols on a line win. Line bet = total bet ÷ 50.</p>';
     $('info-body').innerHTML=h;
-  }else $('info-body').innerHTML=p.html;
+  }else $('info-body').innerHTML=
+    (infoPage===0&&LOADED.LOGO?`<div style="text-align:center;margin-bottom:6px"><img src="${LOADED.LOGO}" style="max-width:78%"></div>`:'')+p.html;
 }
 $('infobtn').onclick=()=>{infoPage=0;renderInfo();$('infomodal').classList.add('show');overlayOpen=true;};
 $('info-close').onclick=()=>{$('infomodal').classList.remove('show');overlayOpen=false;};
