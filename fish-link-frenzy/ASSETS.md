@@ -130,6 +130,30 @@ Chunky gold-outlined casino lettering with inner gradient; slight arc.
 | 68 | `fx_splash.png` | 1536×256 (6 frames of 256×256) | Cartoon water splash burst |
 | 69 | `fx_sparkle.png` | 512×128 (4 frames of 128×128) | Gold star sparkle twinkle |
 
+## 7 · Animated scene pieces — buckets & golden-fish boat (layered)
+
+These are animated in-game (slosh, bob, leap, glow) from **layered stills** —
+deliver the layers below with the SAME camera angle per set. Fish leaps reuse
+the already-delivered `fish_*.png`. Sprite strips are optional upgrades:
+horizontal row, equal frame widths, no bleed, seamless loop, consistent light.
+
+### Buckets (3 colors × 3 layers, 480×480 PNG unless noted)
+| file | description |
+|------|-------------|
+| `bucket_pink_body.png` / `bucket_red_body.png` / `bucket_blue_body.png` | Metal bucket in its color, filled with gold coins, slight top-down view, gold trim — **no fish, no water spray** (composited live) |
+| `bucket_pink_water.png` / `bucket_red_water.png` / `bucket_blue_water.png` | 480×220: water-surface ellipse with ripples + floating coins, tinted to color, transparent elsewhere (animated slosh) |
+| `bucket_pink_glow.png` / `bucket_red_glow.png` / `bucket_blue_glow.png` | Soft radial glow ring in bucket color for the near-full pulse — glow only |
+| optional `bucket_<color>_idle.png` | Strip: 6 frames × 256×256 (1536×256), water gently sloshing, seamless loop |
+
+### Golden-fish boat (Super Pick collector)
+| file | size | description |
+|------|------|-------------|
+| `boat_goldfish.png` | 900×600 | Wooden rowboat heaped with golden fish, 3/4 angle facing right, waterline hint at hull — **no splash/sparkle baked in** |
+| `boat_goldfish_glow.png` | 900×600 | Golden radial glow / ray burst overlay for the "Super Pick ready" state, aligned to the boat |
+| `boat_wake.png` | 900×200 | Ripple rings + wake under the hull, transparent elsewhere |
+| `sign_superpick.png` | 600×360 | Rustic hanging wooden sign, slight tilt, gold "SUPER PICK" lettering ⚠️TEXT |
+| optional `boat_goldfish_idle.png` | strip: 6 frames × 450×300 (2700×300) | Boat bobbing with one fish flip mid-loop, seamless |
+
 ---
 
 ## Delivery checklist for Skywork
