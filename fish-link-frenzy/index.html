@@ -97,7 +97,7 @@
   #buckets{display:flex;gap:6px;margin-top:6px;}
   .bucket{
     flex:1;text-align:center;border-radius:12px;padding:6px 4px 5px;
-    border:2px solid;position:relative;background:rgba(10,4,30,.45);
+    border:2px solid;position:relative;background:rgba(10,4,30,.62);
     cursor:pointer;
   }
   .bucket .bicon{font-size:30px;line-height:1;display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));}
@@ -559,7 +559,8 @@ const ASSET_FILES={
   WA_FL:'wa_fishlink.png',WA_SP:'wa_superpick.png',LOGO:'logo_game.png',CELEB:'celebrate_fisherman.png',
   UI_BUY:'btn_buy.png',UI_SALE:'btn_supersale.png',UI_COIN:'icon_coin.png',
   UI_PILLBAL:'pill_balance.png',UI_PLAQUE:'plaque_jackpot.png',UI_PILLSPINS:'pill_spins.png',
-  UI_CARDBACK:'card_back.png',UI_CARDFRONT:'card_front.png'
+  UI_CARDBACK:'card_back.png',UI_CARDFRONT:'card_front.png',
+  BG:'bg_main.jpg',BGFL:'bg_fishlink.jpg'
 };
 const LOADED={};
 const artImg=(k,cls='symimg')=>LOADED[k]?`<img class="${cls}" src="${LOADED[k]}" alt="">`:null;
@@ -579,6 +580,9 @@ function preloadAssets(){
   }
 }
 function applyUIArt(){
+  if(LOADED.BG)$('game').style.background=`url(${LOADED.BG}) center top/cover no-repeat #2c0748`;
+  if(LOADED.BGFL)$('fishlink').style.background=
+    `linear-gradient(180deg,rgba(10,2,26,.5),rgba(10,2,26,.72)),url(${LOADED.BGFL}) center/cover no-repeat`;
   if(LOADED.UI_COIN)document.querySelector('.coinpill .coin').innerHTML=
     `<img src="${LOADED.UI_COIN}" style="width:18px;height:18px;display:block">`;
   if(LOADED.UI_PILLBAL){const p=document.querySelector('.coinpill');
