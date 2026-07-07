@@ -554,6 +554,8 @@ const ASSET_FILES={
   FLICE:'fl_frame_ice.png',FLBOARD:'fl_board_frame.png',FLBADGE:'fl_tier_badge.png',
   FLCS:'fl_coin_silver.png',FLCG:'fl_coin_gold.png',FLPLUS:'fl_coin_plusspin.png',FLBONUS:'fl_fish_bonus.png',
   WA_BIG:'wa_bigwin.png',WA_MEGA:'wa_megawin.png',WA_EPIC:'wa_epicwin.png',
+  WA_JMINI:'wa_jackpot_mini.png',WA_JMINOR:'wa_jackpot_minor.png',
+  WA_JMAJOR:'wa_jackpot_major.png',WA_JGRAND:'wa_jackpot_grand.png',
   WA_FL:'wa_fishlink.png',WA_SP:'wa_superpick.png',LOGO:'logo_game.png',CELEB:'celebrate_fisherman.png',
   UI_BUY:'btn_buy.png',UI_SALE:'btn_supersale.png',UI_COIN:'icon_coin.png',
   UI_PILLBAL:'pill_balance.png',UI_PLAQUE:'plaque_jackpot.png',UI_PILLSPINS:'pill_spins.png',
@@ -805,7 +807,9 @@ async function bigWinCheck(amount,forceTitle){
   const x=amount/bet();
   if(x<10&&!forceTitle)return;
   const title=forceTitle||(x>=60?'EPIC WIN':x>=30?'MEGA WIN':'BIG WIN');
-  const artKey={'BIG WIN':'WA_BIG','MEGA WIN':'WA_MEGA','EPIC WIN':'WA_EPIC'}[title];
+  const artKey={'BIG WIN':'WA_BIG','MEGA WIN':'WA_MEGA','EPIC WIN':'WA_EPIC',
+    'MINI JACKPOT':'WA_JMINI','MINOR JACKPOT':'WA_JMINOR',
+    'MAJOR JACKPOT':'WA_JMAJOR','GRAND JACKPOT':'WA_JGRAND'}[title];
   $('bw-title').innerHTML=(artKey&&LOADED[artKey])
     ?`<img src="${LOADED[artKey]}" style="max-width:82vw;max-height:26vh">`:title;
   const celeb=$('bw-celeb');
