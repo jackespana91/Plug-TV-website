@@ -144,6 +144,8 @@
     position:relative;border:1px solid #2c2470;overflow:hidden;
   }
   .cell .sym{font-size:min(9.2vw,42px);line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
+  .cell .symimg{width:94%;height:94%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));}
+  .flcell .symimg{width:72%;height:58%;object-fit:contain;}
   .cell .letter{
     font-size:min(10vw,46px);font-weight:900;
     background:linear-gradient(180deg,#ffbf5c,#c9581a 60%,#8a3a0e);
@@ -537,6 +539,25 @@ const PAY={
   BOAT:[25,100,150], WILD:[25,100,150]
 };
 const BASE_WEIGHTS=[['J',14],['Q',14],['K',13],['A',13],['GLOVE',9],['REEL',9],['BOOT',7],['TACKLE',6],['BOAT',4],['WILD',2.2]];
+// production art (see ASSETS.md) — any file present in assets/ replaces its emoji placeholder
+const ASSET_DIR='assets/';
+const ASSET_FILES={
+  J:'sym_j.png',Q:'sym_q.png',K:'sym_k.png',A:'sym_a.png',
+  GLOVE:'sym_gloves.png',REEL:'sym_reel.png',BOOT:'sym_boots.png',
+  TACKLE:'sym_tackle.png',BOAT:'sym_boat.png',WILD:'sym_wild.png',
+  FR:'fish_red.png',FP:'fish_pink.png',FB:'fish_blue.png',FG:'fish_gold.png'
+};
+const LOADED={};
+function preloadAssets(){
+  let pending=Object.keys(ASSET_FILES).length;
+  const done=()=>{if(--pending===0&&!busy){if(grid){for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++)setCell(c,r,grid[c][r]);}else buildReels();}};
+  for(const k in ASSET_FILES){
+    const im=new Image();
+    im.onload=()=>{LOADED[k]=ASSET_DIR+ASSET_FILES[k];done();};
+    im.onerror=done;
+    im.src=ASSET_DIR+ASSET_FILES[k];
+  }
+}
 const FISH_CHANCE=0.085, GOLD_CHANCE=0.05;
 const FISH_COLOR_W=[['FR',40],['FP',33],['FB',27]];
 const FISH_MULTS=[[0.5,30],[1,24],[1.5,14],[2,10],[3,8],[5,6],[8,3.5],[10,2.5],[15,1.2],[25,0.6],[50,0.2]];
@@ -619,6 +640,11 @@ function renderBuckets(){
 }
 function cellHTML(cell){
   const d=SYM[cell.k];
+  if(LOADED[cell.k]){
+    let h=`<img class="symimg" src="${LOADED[cell.k]}" alt="${cell.k}">`;
+    if(d.fish) h+=`<span class="fval">${abbr(cell.val)}</span>`;
+    return h;
+  }
   if(d.letter) return `<span class="letter ${d.letter.toLowerCase()}">${d.letter}</span>`;
   let h=`<span class="sym ${d.fish?'fish-'+d.fish:''}">${d.e}</span>`;
   if(d.fish) h+=`<span class="fval">${abbr(cell.val)}</span>`;
@@ -823,9 +849,13 @@ async function runFishLink(perks){
     const c=cells[i],el=flcells[i];
     if(!c||c==='OCC'){el.className='flcell';el.innerHTML='';return;}
     el.className='flcell filled'+(landed?' landed':'')+(c.jp?' jpfish':'')+(c.plus?' pluscell':'');
-    if(c.prog) el.innerHTML=`<span class="sym fish-pink">🐟</span><span class="fval">BONUS</span>`;
+    if(c.prog) el.innerHTML=(LOADED.FP?`<img class="symimg" src="${LOADED.FP}" alt="">`:`<span class="sym fish-pink">🐟</span>`)+`<span class="fval">BONUS</span>`;
     else if(c.plus) el.innerHTML=`<span class="sym">🪙</span><span class="fval">+1 SPIN</span>`;
-    else el.innerHTML=`<span class="sym ${c.gold?'fish-gold':'fish-'+c.col}">${c.gold?'🐠':'🐟'}</span><span class="fval">${c.jp?'MINI '+abbr(c.val):abbr(c.val)+(c.dbl?' ×2':'')}</span>`;
+    else{
+      const key=c.gold?'FG':{red:'FR',pink:'FP',blue:'FB'}[c.col];
+      const icon=LOADED[key]?`<img class="symimg" src="${LOADED[key]}" alt="">`:`<span class="sym ${c.gold?'fish-gold':'fish-'+c.col}">${c.gold?'🐠':'🐟'}</span>`;
+      el.innerHTML=icon+`<span class="fval">${c.jp?'MINI '+abbr(c.val):abbr(c.val)+(c.dbl?' ×2':'')}</span>`;
+    }
   }
   function sumCells(){let t=0;for(const c of cells)if(c&&c!=='OCC'&&c.val)t+=c.val;return t;}
   function updHud(){
@@ -1140,7 +1170,7 @@ $('info-prev').onclick=()=>{infoPage=(infoPage+INFO_PAGES.length-1)%INFO_PAGES.l
 $('info-next').onclick=()=>{infoPage=(infoPage+1)%INFO_PAGES.length;renderInfo();};
 
 /* =================== INIT =================== */
-buildReels();renderTop();renderBuckets();
+buildReels();renderTop();renderBuckets();preloadAssets();
 $('totalwin').textContent='';
 // debug hooks (used by automated tests)
 window.FLF={spin,runFishLink,runSuperPick,S,evaluate,genGrid,get busy(){return busy;},LINES,BETS};
