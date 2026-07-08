@@ -112,6 +112,28 @@
   .bucket.pink{border-color:#e83ee8;}  .bucket.pink .bname{color:#ff9bff;} .bucket.pink .meter i{background:linear-gradient(90deg,#ff7bff,#c916c9);}
   .bucket.red{border-color:#ff4b4b;}   .bucket.red .bname{color:#ffb14b;}  .bucket.red .meter i{background:linear-gradient(90deg,#ffb14b,#e82f2f);}
   .bucket.blue{border-color:#3e9de8;}  .bucket.blue .bname{color:#8fd4ff;} .bucket.blue .meter i{background:linear-gradient(90deg,#8fd4ff,#1f6fd9);}
+  /* animated scene pieces */
+  @keyframes scbob{0%,100%{transform:translateX(-50%) translateY(0) rotate(-1.5deg);}50%{transform:translateX(-50%) translateY(-4px) rotate(1.8deg);}}
+  @keyframes scwake{0%,100%{transform:translateX(-50%) scale(.9);opacity:.45;}50%{transform:translateX(-50%) scale(1.08);opacity:.85;}}
+  @keyframes scslosh{0%,100%{transform:translateX(-50%) translateY(0) scaleY(1);}50%{transform:translateX(-50%) translateY(-3px) scaleY(1.14);}}
+  @keyframes scswing{from{transform:rotate(1.5deg);}to{transform:rotate(6deg);}}
+  @keyframes scglow{0%,100%{opacity:.3;transform:translate(-50%,-50%) scale(.92);}50%{opacity:.95;transform:translate(-50%,-50%) scale(1.06);}}
+  @keyframes bpop{0%{transform:scale(1);}40%{transform:scale(1.14,.88);}70%{transform:scale(.94,1.08);}100%{transform:scale(1);}}
+  .blayers{position:relative;width:64px;height:58px;margin:0 auto;}
+  .blayers .bwater{position:absolute;left:50%;top:-7px;width:50px;animation:scslosh 2.6s ease-in-out infinite;}
+  .blayers .bbody{position:absolute;left:50%;bottom:0;height:56px;transform:translateX(-50%);filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));}
+  .blayers .bglow2{position:absolute;left:50%;top:52%;width:82px;height:82px;transform:translate(-50%,-50%);opacity:0;pointer-events:none;}
+  .bucket.ready .bglow2{animation:scglow 1.2s ease-in-out infinite;}
+  .bucket.hit .blayers{animation:bpop .45s ease;}
+  #boatwrap{position:relative;width:96px;height:74px;}
+  #boatwrap .wake{position:absolute;left:50%;bottom:-6px;width:100px;transform:translateX(-50%);animation:scwake 3s ease-in-out infinite;}
+  #boatwrap .bimg{position:absolute;left:50%;bottom:2px;width:90px;transform:translateX(-50%);animation:scbob 3s ease-in-out infinite;filter:drop-shadow(0 4px 5px rgba(0,0,0,.4));}
+  #boatwrap .bglow{position:absolute;left:50%;top:42%;width:130px;transform:translate(-50%,-50%);opacity:0;pointer-events:none;}
+  #boat.ready #boatwrap .bglow{animation:scglow 1.1s ease-in-out infinite;}
+  #boat.hit #boatwrap{animation:bpop .45s ease;}
+  #superpick-sign.art{background:none;border:none;box-shadow:none;padding:0;
+    transform-origin:50% -12px;animation:scswing 2.8s ease-in-out infinite alternate;}
+  .flyfish{position:absolute;z-index:30;pointer-events:none;width:42px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4));}
   .fish-red{filter:hue-rotate(150deg) saturate(3) brightness(1.05);}
   .fish-pink{filter:hue-rotate(105deg) saturate(2) brightness(1.25);}
   .fish-blue{filter:saturate(1.8);}
@@ -560,7 +582,12 @@ const ASSET_FILES={
   UI_BUY:'btn_buy.png',UI_SALE:'btn_supersale.png',UI_COIN:'icon_coin.png',
   UI_PILLBAL:'pill_balance.png',UI_PLAQUE:'plaque_jackpot.png',UI_PILLSPINS:'pill_spins.png',
   UI_CARDBACK:'card_back.png',UI_CARDFRONT:'card_front.png',
-  BG:'bg_main.jpg',BGFL:'bg_fishlink.jpg'
+  BG:'bg_main.jpg',BGFL:'bg_fishlink.jpg',
+  BK_PINK:'bucket_pink_body.png',BK_RED:'bucket_red_body.png',BK_BLUE:'bucket_blue_body.png',
+  BKG_PINK:'bucket_pink_glow.png',BKG_RED:'bucket_red_glow.png',BKG_BLUE:'bucket_blue_glow.png',
+  BK_WATER:'bucket_pink_water.png',
+  SC_BOAT:'boat_goldfish.png',SC_BOATGLOW:'boat_goldfish_glow.png',
+  SC_WAKE:'boat_wake.png',SC_SIGN:'sign_superpick.png'
 };
 const LOADED={};
 const artImg=(k,cls='symimg')=>LOADED[k]?`<img class="${cls}" src="${LOADED[k]}" alt="">`:null;
@@ -600,8 +627,55 @@ function applyUIArt(){
     document.querySelector(`.bucket.${col} .bicon`).outerHTML=
       `<img class="bicon" src="${LOADED[bmap[col]]}" style="width:38px;height:34px;object-fit:contain;display:block;margin:0 auto">`;
   }
-  if(LOADED.FG)document.querySelector('#boat .goldfish').outerHTML=
+  if(LOADED.FG&&document.querySelector('#boat .goldfish'))document.querySelector('#boat .goldfish').outerHTML=
     `<img class="goldfish" src="${LOADED.FG}" style="position:absolute;top:-14px;left:6px;width:26px;filter:drop-shadow(0 0 4px #ffd23f)">`;
+  // animated scene: boat of golden fish + hanging sign + layered buckets
+  if(LOADED.SC_BOAT){
+    $('boat').innerHTML=
+      `<div id="boatwrap">`+
+      (LOADED.SC_WAKE?`<img class="wake" src="${LOADED.SC_WAKE}">`:'')+
+      (LOADED.SC_BOATGLOW?`<img class="bglow" src="${LOADED.SC_BOATGLOW}">`:'')+
+      `<img class="bimg" src="${LOADED.SC_BOAT}"></div>`+
+      `<div id="goldmeter"><i></i></div><div id="goldcount" style="text-align:center">0/10</div>`;
+    $('boat').style.fontSize='';
+  }
+  if(LOADED.SC_SIGN){
+    const s=$('superpick-sign');s.classList.add('art');
+    s.innerHTML=`<img src="${LOADED.SC_SIGN}" style="width:112px;display:block">`;
+  }
+  const bko={pink:['BK_PINK','BKG_PINK',0],red:['BK_RED','BKG_RED',30],blue:['BK_BLUE','BKG_BLUE',-120]};
+  for(const col in bko){
+    const[bk,gl,hue]=bko[col];
+    if(!LOADED[bk])continue;
+    const icon=document.querySelector(`.bucket.${col} .bicon`);
+    if(icon)icon.outerHTML=`<div class="blayers">`+
+      (LOADED.BK_WATER?`<img class="bwater" src="${LOADED.BK_WATER}" style="filter:hue-rotate(${hue}deg)">`:'')+
+      `<img class="bbody" src="${LOADED[bk]}">`+
+      (LOADED[gl]?`<img class="bglow2" src="${LOADED[gl]}">`:'')+`</div>`;
+  }
+  renderBuckets();
+}
+// fish flies from the reel cell into its bucket (or the boat for golden fish)
+function flyFish(fromEl,col){
+  const key=col==='gold'?'FG':{red:'FR',pink:'FP',blue:'FB'}[col];
+  const target=col==='gold'?$('boat'):document.querySelector('.bucket.'+col);
+  if(!LOADED[key]||!fromEl||!target)return;
+  const game=$('game'),gr=game.getBoundingClientRect();
+  const fr=fromEl.getBoundingClientRect(),tr=target.getBoundingClientRect();
+  const img=document.createElement('img');img.src=LOADED[key];img.className='flyfish';
+  img.style.left=(fr.left-gr.left+fr.width/2-21)+'px';
+  img.style.top=(fr.top-gr.top+fr.height/2-16)+'px';
+  game.appendChild(img);
+  const dx=(tr.left+tr.width/2)-(fr.left+fr.width/2),dy=(tr.top+tr.height/2)-(fr.top+fr.height/2);
+  img.animate([
+    {transform:'translate(0,0) scale(1) rotate(0deg)',opacity:1,offset:0},
+    {transform:`translate(${dx*0.42}px,${dy*0.5-64}px) scale(.9) rotate(-170deg)`,opacity:1,offset:.5},
+    {transform:`translate(${dx}px,${dy}px) scale(.4) rotate(-330deg)`,opacity:.85,offset:1}
+  ],{duration:680,easing:'cubic-bezier(.32,.2,.62,1)'}).onfinish=()=>{
+    img.remove();
+    target.classList.add('hit');
+    setTimeout(()=>target.classList.remove('hit'),500);
+  };
 }
 const FISH_CHANCE=0.085, GOLD_CHANCE=0.05;
 const FISH_COLOR_W=[['FR',40],['FP',33],['FB',27]];
@@ -679,9 +753,11 @@ function renderBuckets(){
     const el=document.querySelector('.bucket.'+col);
     el.querySelector('.cnt').textContent=S.buckets[col]+'/'+TARGET;
     el.querySelector('.meter i').style.width=Math.min(100,S.buckets[col]/TARGET*100)+'%';
+    el.classList.toggle('ready',S.buckets[col]>=TARGET-2);
   }
   $('goldmeter').querySelector('i').style.width=Math.min(100,S.buckets.gold/TARGET*100)+'%';
   $('goldcount').textContent=S.buckets.gold+'/'+TARGET;
+  $('boat').classList.toggle('ready',S.buckets.gold>=TARGET-2);
 }
 function cellHTML(cell){
   const d=SYM[cell.k];
@@ -838,11 +914,11 @@ function burstCoins(){
 /* =================== FEATURES =================== */
 function collectFish(res){
   const gained={red:0,pink:0,blue:0,gold:0};
-  for(const[c,r,cell]of res.fishCells){
+  res.fishCells.forEach(([c,r,cell],i)=>{
     const col=SYM[cell.k].fish; gained[col]++;
     const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
-    if(el)el.classList.add('fishflash');
-  }
+    if(el){el.classList.add('fishflash');setTimeout(()=>flyFish(el,col),i*140);}
+  });
   for(const col in gained) S.buckets[col]+=gained[col];
   renderBuckets();
 }
