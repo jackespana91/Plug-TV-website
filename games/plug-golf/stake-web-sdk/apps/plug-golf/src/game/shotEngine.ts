@@ -120,7 +120,8 @@ export function buildShotTimeline(outcome: { tier: Tier; mult: number }, ctx: Sh
   const F = FLIGHT[ctx.club];
   const rng = ctx.rng;
   const from = { ...TEE };
-  const windCurve = Math.cos(ctx.wind.dir) * ctx.wind.spd * 2.2;
+  // wind bend — a PURE strike (high quality) flies truer; cosmetic, RNG already decided
+  const windCurve = Math.cos(ctx.wind.dir) * ctx.wind.spd * 2.2 * (1 - ctx.quality * 0.5);
   const segments: Segment[] = [];
   let rest = restPoint(tier, ctx);
   let ballOutAtEnd = false;

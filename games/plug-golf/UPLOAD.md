@@ -9,7 +9,7 @@ Two deliverables, matching Stake's two SDKs. Full step-by-step is in
 
 Contains the Math files Stake ingests: `books_compressed/*.jsonl.zst`,
 `lookup_tables/*.csv`, and `config.json`. Already generated and verified at
-**96.00% RTP** on all six modes.
+**96.50% RTP** on all six modes.
 
 To regenerate (after any paytable change):
 ```bash
@@ -43,7 +43,7 @@ driver, masters`. Each book emits `{type:"shot", club, tier, payoutMultiplier}` 
 never affects the payout. Keep the two sides in sync if you edit the paytables.
 
 ## Before you upload
-- [ ] `python build_publish.py` → all six modes print `96.00% … OK`
+- [ ] `python build_publish.py` → all six modes print `96.50% … OK`
 - [ ] `node games/plug-golf/verify-rtp.mjs` → `ALL TABLES PASS ✓`
 - [ ] web-sdk: `npm run check` + `npm run test:engine` + `preShot.test.ts` pass
 - [ ] decide Masters pricing (cost) and confirm max-win / RTP disclosure per market

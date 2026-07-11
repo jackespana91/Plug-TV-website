@@ -7,7 +7,7 @@ the ready-to-upload **Math** payload.
 math-sdk/
 └── games/plug_golf/
     ├── paytables.py          # single source of truth: the 6 clubs' weighted tables
-    ├── game_config.py        # GameConfig — 6 bet modes (clubs), cost 1.0, 96% RTP
+    ├── game_config.py        # GameConfig — 6 bet modes (clubs), cost 1.0, 96.5% RTP
     ├── gamestate.py          # run_spin() → draws an outcome, emits shot + finalWin
     ├── game_override.py / game_executables.py / game_calculations.py / game_events.py
     ├── run.py                # create_books() + generate_configs() (needs the framework)
@@ -29,19 +29,19 @@ RTP is **exact by construction** — no simulation or optimiser needed.
 ```bash
 pip install zstandard
 cd games/plug_golf
-python build_publish.py     # writes publish/, re-verifies 96.00% per mode
+python build_publish.py     # writes publish/, re-verifies 96.50% per mode
 ```
 
 Output (verified):
 
 | mode | rows | RTP | max win |
 |---|---|---|---|
-| wedge | 7 | 96.00% | 5x |
-| short_iron | 8 | 96.00% | 10x |
-| long_iron | 8 | 96.00% | 15x |
-| three_wood | 9 | 96.00% | 25x |
-| driver | 10 | 96.00% | 50x |
-| masters | 8 | 96.00% | 100x |
+| wedge | 7 | 96.50% | 5x |
+| short_iron | 8 | 96.50% | 10x |
+| long_iron | 8 | 96.50% | 15x |
+| three_wood | 9 | 96.50% | 25x |
+| driver | 10 | 96.50% | 50x |
+| masters | 8 | 96.50% | 100x |
 
 Alternatively, drop `games/plug_golf/` into a `StakeEngine/math-sdk` checkout and
 run `python run.py` — `create_books()`/`generate_configs()` produce the same payload

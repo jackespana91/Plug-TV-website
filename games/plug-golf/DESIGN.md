@@ -30,6 +30,25 @@ layer credible, and the animation layer is what masks the RNG.
 presentation. This is the same architecture as crash/plinko/mines-style instant-win
 games and it's what keeps the game honest and certifiable.
 
+### 2.1 The skill illusion (a hard requirement)
+
+The outcome is RNG (~96.5% RTP), but the player must *feel* they're influencing the
+shot. That feel is built from cosmetic-only levers that shape presentation without
+ever touching the payout:
+
+- **Aim biases the finish.** The resting spot is drawn in the *direction of the
+  player's aim* (within whatever tier the RNG gave), so a shot ends up roughly where
+  they aimed — not teleported to a random spot.
+- **Timing tightens the shot.** Swing quality (from the pull-back "PURE" band) tightens
+  the angular scatter of the finish *and* straightens the ball flight — a pure strike
+  flies truer through the wind; a mistimed one bends and scatters more.
+- **The story sells it.** Wind, spin, bounce and lip are things players already
+  believe can move a golf ball, so the animation that masks the RNG reads as physics,
+  not a slot reel.
+
+None of these change the drawn multiplier — verifiable, certifiable, and disclosed as
+non-outcome-affecting (§7.4 compliance). The skill is *felt*, the fairness is *fixed*.
+
 ## 3. Scoring fiction: Closest to the Pin
 
 Every round is a closest-to-the-pin challenge. The multiplier maps to how close the
@@ -53,7 +72,7 @@ never feels like a cheat.
 
 ## 4. Math model
 
-All modes target **96.00% RTP exactly**. Weights are integers per 10,000 and live in
+All modes target **96.50% RTP exactly**. Weights are integers per 10,000 and live in
 one place: the `<script id="paytables">` JSON block inside `index.html`. The game
 plays from that block and `verify-rtp.mjs` asserts it, so the shipped math and the
 documented math cannot drift.
@@ -68,11 +87,11 @@ node games/plug-golf/verify-rtp.mjs
 
 | Multiplier | Wedge | Short Iron | Long Iron | 3 Wood | Driver | Sunday Masters |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0x    | 1362 | 2332 | 3384 | 3939 | 4693 | 6140 |
+| 0x    | 1312 | 2282 | 3334 | 3889 | 4643 | 6090 |
 | 0.2x  | —    | 1500 | 1400 | 1300 | 1200 | —    |
 | 0.5x  | 2000 | 1800 | 1500 | 1300 | 1100 | 1500 |
 | 0.8x  | 2200 | 1400 | 1100 | 1000 | 800  | —    |
-| 1x    | 2300 | 1300 | 1100 | 950  | 800  | 1000 |
+| 1x    | 2350 | 1350 | 1150 | 1000 | 850  | 1050 |
 | 1.5x  | 1200 | —    | —    | —    | —    | —    |
 | 2x    | 650  | 900  | 950  | 895  | 800  | 800  |
 | 3x    | —    | 500  | —    | —    | —    | —    |
@@ -87,12 +106,12 @@ node games/plug-golf/verify-rtp.mjs
 
 | Mode | RTP | Hit rate (any return) | Win rate (≥1x) | Max | Std dev |
 |---|---:|---:|---:|---:|---:|
-| Wedge | 96.00% | 86.4% | 44.4% | 5x | 0.87 |
-| Short Iron | 96.00% | 76.7% | 29.7% | 10x | 1.68 |
-| Long Iron | 96.00% | 66.2% | 26.2% | 15x | 2.19 |
-| 3 Wood | 96.00% | 60.6% | 24.6% | 25x | 2.50 |
-| Driver | 96.00% | 53.1% | 22.1% | 50x | 3.30 |
-| Sunday Masters | 96.00% | 38.6% | 23.6% | 100x | 4.94 |
+| Wedge | 96.50% | 86.9% | 44.9% | 5x | 0.86 |
+| Short Iron | 96.50% | 77.2% | 30.2% | 10x | 1.68 |
+| Long Iron | 96.50% | 66.7% | 26.7% | 15x | 2.19 |
+| 3 Wood | 96.50% | 61.1% | 25.1% | 25x | 2.50 |
+| Driver | 96.50% | 53.6% | 22.6% | 50x | 3.30 |
+| Sunday Masters | 96.50% | 39.1% | 24.1% | 100x | 4.94 |
 
 This gives the club-select screen real meaning without touching RTP: the club **is**
 the volatility slider. Casual players live on the Wedge; degens live on the Driver.
@@ -207,7 +226,7 @@ and emits Stake's required files into `stake-engine/math/`:
 
 Because the game is a discrete instant win, the outcome space is enumerated exactly
 (each paytable row = one simulation), so RTP is exact by construction — no Monte
-Carlo, no optimizer. The generator re-verifies 96.00% per mode from the emitted
+Carlo, no optimizer. The generator re-verifies 96.50% per mode from the emitted
 integer tables. Before upload, compress the books: `zstd math/books_*.jsonl`.
 
 Mode names on the wire: `wedge`, `short_iron`, `long_iron`, `three_wood`, `driver`,

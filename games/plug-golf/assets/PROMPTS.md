@@ -6,7 +6,7 @@ line per slot — see the bottom). Works with any image generator (Midjourney,
 DALL·E 3, Ideogram, Stable Diffusion / SDXL, Flux, etc.).
 
 Golden rule: **art is cosmetic and must never encode the outcome.** These are
-skins over a fixed 96% RTP math model.
+skins over a fixed 96.5% RTP math model.
 
 ---
 

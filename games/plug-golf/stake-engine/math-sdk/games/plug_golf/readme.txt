@@ -2,7 +2,7 @@ PLUG GOLF — Stake Engine math game
 ==================================
 
 Discrete instant-win golf. Six bet modes (clubs), each a weighted payout table in
-paytables.py. Every mode is exactly 96.00% RTP (enumerable outcomes — no optimiser
+paytables.py. Every mode is exactly 96.50% RTP (enumerable outcomes — no optimiser
 needed). Modeled on the math-sdk `fifty_fifty` sample.
 
 WHAT TO UPLOAD

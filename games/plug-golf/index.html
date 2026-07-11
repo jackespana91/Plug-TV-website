@@ -162,15 +162,15 @@
      Weights are per-10000. The meter/aim NEVER touch these numbers. -->
 <script id="paytables" type="application/json">
 {
-  "rtpTarget": 0.96,
+  "rtpTarget": 0.965,
   "weightScale": 10000,
   "clubs": {
-    "wedge":     {"label":"Wedge",         "vol":1, "outcomes":[[0,1362],[0.5,2000],[0.8,2200],[1,2300],[1.5,1200],[2,650],[5,288]]},
-    "shortIron": {"label":"Short Iron",    "vol":2, "outcomes":[[0,2332],[0.2,1500],[0.5,1800],[0.8,1400],[1,1300],[2,900],[3,500],[10,268]]},
-    "longIron":  {"label":"Long Iron",     "vol":3, "outcomes":[[0,3384],[0.2,1400],[0.5,1500],[0.8,1100],[1,1100],[2,950],[5,380],[15,186]]},
-    "threeWood": {"label":"3 Wood",        "vol":4, "outcomes":[[0,3939],[0.2,1300],[0.5,1300],[0.8,1000],[1,950],[2,895],[5,400],[10,150],[25,66]]},
-    "driver":    {"label":"Driver",        "vol":5, "outcomes":[[0,4693],[0.2,1200],[0.5,1100],[0.8,800],[1,800],[2,800],[5,380],[10,162],[25,40],[50,25]]},
-    "masters":   {"label":"Sunday Masters","vol":6, "outcomes":[[0,6140],[0.5,1500],[1,1000],[2,800],[5,350],[10,150],[25,40],[100,20]]}
+    "wedge":     {"label":"Wedge",         "vol":1, "outcomes":[[0,1312],[0.5,2000],[0.8,2200],[1,2350],[1.5,1200],[2,650],[5,288]]},
+    "shortIron": {"label":"Short Iron",    "vol":2, "outcomes":[[0,2282],[0.2,1500],[0.5,1800],[0.8,1400],[1,1350],[2,900],[3,500],[10,268]]},
+    "longIron":  {"label":"Long Iron",     "vol":3, "outcomes":[[0,3334],[0.2,1400],[0.5,1500],[0.8,1100],[1,1150],[2,950],[5,380],[15,186]]},
+    "threeWood": {"label":"3 Wood",        "vol":4, "outcomes":[[0,3889],[0.2,1300],[0.5,1300],[0.8,1000],[1,1000],[2,895],[5,400],[10,150],[25,66]]},
+    "driver":    {"label":"Driver",        "vol":5, "outcomes":[[0,4643],[0.2,1200],[0.5,1100],[0.8,800],[1,850],[2,800],[5,380],[10,162],[25,40],[50,25]]},
+    "masters":   {"label":"Sunday Masters","vol":6, "outcomes":[[0,6090],[0.5,1500],[1,1050],[2,800],[5,350],[10,150],[25,40],[100,20]]}
   }
 }
 </script>
@@ -191,7 +191,7 @@
 
     <div id="clubs">
       <h2>Pick your club</h2>
-      <p class="sub">Same 96% RTP on every club — the club sets your volatility.</p>
+      <p class="sub">Same 96.5% RTP on every club — the club sets your volatility.</p>
       <div class="clubgrid" id="clubGrid"></div>
       <button id="showcaseBtn">🎬 Showcase — preview any shot</button>
     </div>
@@ -229,7 +229,7 @@
         <button id="rReplay" class="hidden">🎬&nbsp;WATCH REPLAY</button>
       </div>
     </div>
-    <div id="foot">Prototype · RTP 96.0% all modes · outcome is drawn by RNG at the moment you release — aim &amp; meter are presentation only</div>
+    <div id="foot">Prototype · RTP 96.5% all modes · outcome is drawn by RNG at the moment you release — aim &amp; meter are presentation only</div>
 
     <div id="intro"><img id="introMark" class="introMark" alt=""><div class="big">PLUG<span>GOLF</span></div><div class="tl">WHERE THE NEXT WAVE BREAKS</div></div>
   </div>
@@ -838,7 +838,8 @@ function buildShot(){
   const rest = restPoint(o.tier);
   S.rest = rest; S.distM = reportDist(o.tier);
   const from={x:TEE.x,y:TEE.y};
-  const windCurve = Math.cos(S.wind.dir)* S.wind.spd*2.2;   // gentle cosmetic bend
+  // wind bend — a PURE strike flies truer (skill feel); still cosmetic, RNG already decided
+  const windCurve = Math.cos(S.wind.dir)* S.wind.spd*2.2*(1 - S.quality*0.5);
 
   if(o.tier==='lose'){
     // island green: every miss is water. Three ways to find it.
@@ -1491,7 +1492,7 @@ toClub();
 /* ---------- RGS boot: real balance + operator bet levels ---------- */
 if(RGS){
   document.getElementById('foot').textContent =
-    'Connected to Stake Engine RGS · RTP 96.0% all modes · outcome drawn server-side at release';
+    'Connected to Stake Engine RGS · RTP 96.5% all modes · outcome drawn server-side at release';
   (async()=>{
     try{
       const r = await rgsCall('/wallet/authenticate');

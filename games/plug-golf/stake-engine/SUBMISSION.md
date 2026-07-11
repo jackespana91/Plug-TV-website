@@ -10,7 +10,7 @@ The path from this repo to a live game on Stake Engine. Two artifacts ship: the
 
 - [ ] **Generate**: `node stake-engine/generate-math.mjs` — writes `math/` (books,
       lookup tables, `index.json`). Re-run after any paytable edit in `index.html`.
-- [ ] **Verify RTP**: the generator re-checks 96.00% per mode; also run
+- [ ] **Verify RTP**: the generator re-checks 96.50% per mode; also run
       `node games/plug-golf/verify-rtp.mjs` (all six tables must print ✓).
 - [ ] **Compress books**: `zstd math/books_*.jsonl` → `.jsonl.zst` (Stake requires
       zstd-compressed books; `index.json` already references the `.zst` names).
@@ -44,7 +44,7 @@ The path from this repo to a live game on Stake Engine. Two artifacts ship: the
 - [ ] **Bet levels**: the client reads `config.betLevels` from `wallet/authenticate`;
       confirm the operator config matches the intended stakes.
 - [ ] **Currency / min-max bet / step** per operator.
-- [ ] **RTP disclosure**: 96.00% (all modes) surfaced in the game's info/rules
+- [ ] **RTP disclosure**: 96.50% (all modes) surfaced in the game's info/rules
       screen as the jurisdiction requires.
 
 ## 4. Compliance review (per market — confirm with Stake/legal)
