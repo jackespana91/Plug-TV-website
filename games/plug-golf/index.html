@@ -38,6 +38,27 @@
   #mute:active{transform:scale(.92)}
   #avatar{pointer-events:auto;transition:transform .1s}
   #avatar:active{transform:scale(.95)}
+  #info{pointer-events:auto;background:linear-gradient(180deg,rgba(32,42,36,.92),rgba(12,17,14,.92));
+        border:1px solid rgba(120,150,132,.22);border-radius:50%;width:33px;height:33px;color:var(--txt);font-size:15px;cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .1s}
+  #info:active{transform:scale(.92)}
+  /* ---------- rules / info panel ---------- */
+  #rules{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+         padding:18px;background:linear-gradient(to top,rgba(5,8,6,.97) 62%,rgba(5,8,6,.5));border-radius:18px}
+  #rules h2{font-size:20px;font-weight:900;margin-bottom:10px}
+  .rulesbody{width:100%;max-width:360px;max-height:62vh;overflow-y:auto;color:var(--txt);font-size:12.5px;line-height:1.5}
+  .rulesbody h3{font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--plug);margin:14px 0 5px}
+  .rulesbody h3:first-child{margin-top:0}
+  .rulesbody p{color:#cbd8ce;margin-bottom:6px}
+  .rulesbody ol{margin:0 0 6px 18px;color:#cbd8ce} .rulesbody ol li{margin-bottom:3px}
+  .rulesbody table{width:100%;border-collapse:collapse;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+  .rulesbody th,.rulesbody td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--line)}
+  .rulesbody th{color:var(--dim);font-weight:700;font-size:11px}
+  .rulesbody .fair{background:#141a16;border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:#dfe9e1;margin:8px 0}
+  .rulesbody .fair b{color:var(--plug)}
+  .rulesbody .rg{color:var(--dim);font-size:11px;margin-top:8px}
+  #rulesClose{margin-top:12px;background:var(--plug);color:#04140a;border:none;border-radius:999px;
+              padding:11px 22px;font-weight:900;font-size:13px;cursor:pointer;width:100%;max-width:360px}
   /* ---------- club select ---------- */
   #clubs{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
          padding:18px;background:linear-gradient(to top,rgba(5,8,6,.94) 55%,rgba(5,8,6,.25));border-radius:18px}
@@ -186,6 +207,7 @@
       <div class="spacer"></div>
       <div class="pill" id="betPill"><button id="betDn">–</button> BET <b id="betV">1.00</b> <button id="betUp">+</button></div>
       <div class="pill"><img id="coinIco" class="ico" alt="">&nbsp;<b id="balV">1000.00</b></div>
+      <button id="info" title="Rules">ⓘ</button>
       <button id="mute">🔊</button>
     </div>
 
@@ -201,6 +223,12 @@
       <p class="sub">Force any outcome and watch the full animation. (Preview only — real rounds are RNG.)</p>
       <div class="scgrid" id="scGrid"></div>
       <button id="scClose">← Back to clubs</button>
+    </div>
+
+    <div id="rules" class="hidden">
+      <h2>How to play &amp; rules</h2>
+      <div class="rulesbody" id="rulesBody"></div>
+      <button id="rulesClose">Got it</button>
     </div>
 
     <div id="charPick" class="hidden">
@@ -603,6 +631,39 @@ function renderAvatar(){
 })();
 $('avatar').onclick=()=>{ tone(520,.06,'triangle',.08); $('charPick').classList.remove('hidden'); };
 $('charClose').onclick=()=>{ tone(600,.06,'triangle',.08); $('charPick').classList.add('hidden'); };
+
+/* ---------- rules / info panel (RTP + skill disclosure for compliance) ---------- */
+(function buildRules(){
+  const rtp=(CFG.rtpTarget*100).toFixed(1);
+  const order=['wedge','shortIron','longIron','threeWood','driver','masters'];
+  const rows=order.map(k=>{
+    const t=CFG.clubs[k], max=Math.max(...t.outcomes.map(o=>o[0]));
+    const hit=Math.round(t.outcomes.filter(o=>o[0]>0).reduce((s,o)=>s+o[1],0)/CFG.weightScale*100);
+    return `<tr><td>${t.label}</td><td>${max}x</td><td>${hit}%</td></tr>`;
+  }).join('');
+  $('rulesBody').innerHTML=`
+    <h3>How to play</h3>
+    <ol>
+      <li><b>Pick a club.</b> Each club is a different risk level — same ${rtp}% return, different max win.</li>
+      <li><b>Aim</b> by dragging the target on the green, then lock it.</li>
+      <li><b>Pull the ball back</b> to load power and <b>release</b> to swing.</li>
+      <li><b>Watch the shot.</b> The closer to the pin, the bigger the win — up to a hole-in-one.</li>
+    </ol>
+    <h3>Clubs</h3>
+    <table><tr><th>Club</th><th>Max win</th><th>Pays on</th></tr>${rows}</table>
+    <div class="fair">
+      <b>This is a game of chance.</b> The outcome of every shot is decided by a
+      random number generator the instant you swing, and your bet is settled on
+      that result. Your <b>aim and swing timing change how the shot looks, not
+      whether it wins</b> — they never affect the outcome or the payout.
+    </div>
+    <h3>Return to player</h3>
+    <p>RTP is <b>${rtp}%</b> on every club. Maximum win is <b>100×</b> your bet
+    (Sunday Masters). Wins are shown as a multiplier of your stake.</p>
+    <p class="rg">Please gamble responsibly. Only stake what you can afford to lose.</p>`;
+})();
+$('info').onclick=()=>{ tone(520,.06,'triangle',.08); $('rules').classList.remove('hidden'); };
+$('rulesClose').onclick=()=>{ tone(600,.06,'triangle',.08); $('rules').classList.add('hidden'); };
 S.character=loadChar(); renderAvatar();
 setTimeout(()=>$('intro')?.classList.add('gone'), 2100);
 
