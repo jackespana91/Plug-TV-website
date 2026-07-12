@@ -134,6 +134,38 @@
   #superpick-sign.art{background:none;border:none;box-shadow:none;padding:0;
     transform-origin:50% -12px;animation:scswing 2.8s ease-in-out infinite alternate;}
   .flyfish{position:absolute;z-index:30;pointer-events:none;width:42px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4));}
+  /* upgraded bucket presentation (active when body art is loaded) */
+  .bucket.art{background:none;border:none;padding:2px 0 4px;}
+  .bucket.art .blayers{width:84px;height:78px;}
+  .bucket.art .blayers .bbody{height:76px;}
+  .bucket.art .blayers .bwater{width:52px;top:-6px;}
+  .bucket.art .blayers .bglow2{width:112px;height:112px;}
+  .bucket.art .bname{background:rgba(10,4,30,.75);border-radius:8px;padding:2px 3px;margin:3px 6px 0;}
+  .bucket.art .meter{margin:3px 8px 0;background:rgba(10,4,30,.8);border:1px solid rgba(255,255,255,.25);}
+  .bucket.art .cnt{top:0;right:8px;}
+  /* slot juice */
+  .reel{overflow:hidden;}
+  .strip{display:flex;flex-direction:column;gap:4px;}
+  .strip.scrolling{animation:reelscroll .36s linear infinite;filter:blur(2.5px);}
+  @keyframes reelscroll{from{transform:translateY(calc(-50% - 2px));}to{transform:translateY(0);}}
+  .reel.stopbounce .strip{animation:stopb .42s cubic-bezier(.2,.8,.3,1.25);}
+  @keyframes stopb{0%{transform:translateY(-16px);}55%{transform:translateY(5px);}100%{transform:translateY(0);}}
+  .cell.win .symimg,.cell.win .letter,.cell.win .sym{animation:winpop .55s ease;}
+  @keyframes winpop{0%{transform:scale(1);}40%{transform:scale(1.22);}70%{transform:scale(.94);}100%{transform:scale(1);}}
+  .winspark{position:absolute;font-size:13px;color:#ffe95c;text-shadow:0 0 6px #ff8a00;pointer-events:none;z-index:5;animation:sparkfly .8s ease-out forwards;}
+  @keyframes sparkfly{0%{transform:translate(0,0) scale(.4);opacity:1;}100%{transform:translate(var(--sx),var(--sy)) scale(1.25);opacity:0;}}
+  .cell.wildcell::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.38) 50%,transparent 68%);
+    transform:translateX(-110%);animation:wildshine 2.6s ease-in-out infinite;
+  }
+  @keyframes wildshine{0%,60%{transform:translateX(-110%);}100%{transform:translateX(110%);}}
+  #spinbtn.pulse{animation:btnpulse 2.1s ease-in-out infinite;}
+  @keyframes btnpulse{0%,100%{box-shadow:0 5px 0 #145c04,0 8px 14px rgba(0,0,0,.5);}50%{box-shadow:0 5px 0 #145c04,0 0 22px #8fff4b99,0 8px 14px rgba(0,0,0,.5);}}
+  .coinpop{position:absolute;width:20px;pointer-events:none;z-index:20;animation:coinrise .9s ease-out forwards;}
+  @keyframes coinrise{0%{transform:translateY(0) scale(.6) rotate(0);opacity:1;}100%{transform:translateY(-46px) scale(1.1) rotate(160deg);opacity:0;}}
+  #fl-man img.face{animation:fsway 3.4s ease-in-out infinite;}
+  @keyframes fsway{0%,100%{transform:rotate(-1.6deg);}50%{transform:rotate(1.6deg);}}
   .fish-red{filter:hue-rotate(150deg) saturate(3) brightness(1.05);}
   .fish-pink{filter:hue-rotate(105deg) saturate(2) brightness(1.25);}
   .fish-blue{filter:saturate(1.8);}
@@ -647,13 +679,53 @@ function applyUIArt(){
   for(const col in bko){
     const[bk,gl,hue]=bko[col];
     if(!LOADED[bk])continue;
-    const icon=document.querySelector(`.bucket.${col} .bicon`);
+    const bucket=document.querySelector(`.bucket.${col}`);
+    const icon=bucket.querySelector('.bicon');
     if(icon)icon.outerHTML=`<div class="blayers">`+
       (LOADED.BK_WATER?`<img class="bwater" src="${LOADED.BK_WATER}" style="filter:hue-rotate(${hue}deg)">`:'')+
       `<img class="bbody" src="${LOADED[bk]}">`+
       (LOADED[gl]?`<img class="bglow2" src="${LOADED[gl]}">`:'')+`</div>`;
+    bucket.classList.add('art');
   }
   renderBuckets();
+  startIdleLife();
+}
+// ambient life: fish leap out of buckets / boat every few seconds
+let idleStarted=false;
+function startIdleLife(){
+  if(idleStarted)return;idleStarted=true;
+  const leap=(holder,src)=>{
+    const f=document.createElement('img');f.src=src;
+    f.style.cssText='position:absolute;left:50%;top:18%;width:26px;transform:translateX(-50%);pointer-events:none;z-index:2;';
+    holder.appendChild(f);
+    f.animate([
+      {transform:'translate(-50%,4px) scale(.45) rotate(0deg)',opacity:0},
+      {transform:'translate(-26%,-26px) scale(1) rotate(26deg)',opacity:1,offset:.45},
+      {transform:'translate(-4%,4px) scale(.5) rotate(85deg)',opacity:0}
+    ],{duration:950,easing:'ease-out'}).onfinish=()=>f.remove();
+  };
+  setInterval(()=>{
+    if(document.hidden||overlayOpen)return;
+    const col=['pink','red','blue'][Math.floor(rnd()*3)];
+    const key={red:'FR',pink:'FP',blue:'FB'}[col];
+    const holder=document.querySelector(`.bucket.${col} .blayers`);
+    if(holder&&LOADED[key])leap(holder,LOADED[key]);
+  },4300);
+  setInterval(()=>{
+    if(document.hidden||overlayOpen)return;
+    const holder=document.querySelector('#boatwrap');
+    if(holder&&LOADED.FG)leap(holder,LOADED.FG);
+  },6700);
+}
+function addSparkles(el,n=3){
+  for(let i=0;i<n;i++){
+    const s=document.createElement('span');s.className='winspark';s.textContent='✦';
+    s.style.left=(18+rnd()*60)+'%';s.style.top=(18+rnd()*60)+'%';
+    s.style.setProperty('--sx',(rnd()*46-23)+'px');
+    s.style.setProperty('--sy',(-16-rnd()*30)+'px');
+    s.style.animationDelay=(rnd()*0.35)+'s';
+    el.appendChild(s);setTimeout(()=>s.remove(),1400);
+  }
 }
 // fish flies from the reel cell into its bucket (or the boat for golden fish)
 function flyFish(fromEl,col){
@@ -776,11 +848,13 @@ function buildReels(){
   const R=$('reels'); R.innerHTML='';
   for(let c=0;c<COLS;c++){
     const reel=document.createElement('div'); reel.className='reel'; reel.dataset.c=c;
+    const strip=document.createElement('div'); strip.className='strip';
     for(let r=0;r<ROWS;r++){
       const cell=document.createElement('div'); cell.className='cell'; cell.dataset.r=r;
       cell.innerHTML=cellHTML(randCell(c));
-      reel.appendChild(cell);
+      strip.appendChild(cell);
     }
+    reel.appendChild(strip);
     R.appendChild(reel);
   }
 }
@@ -807,20 +881,37 @@ function genGrid(){
 async function animateReels(g){
   skipReq=false;
   const reels=[...document.querySelectorAll('.reel')];
-  reels.forEach(re=>re.classList.add('spinning'));
   document.querySelectorAll('.cell').forEach(el=>el.classList.remove('win','wildcell','fishflash'));
+  document.querySelectorAll('.winspark').forEach(el=>el.remove());
+  // lock reel heights, double the strips, start the scroll
+  reels.forEach(reel=>{
+    if(!reel.style.height)reel.style.height=reel.clientHeight+'px';
+    const strip=reel.querySelector('.strip');
+    strip.innerHTML+=strip.innerHTML;
+    strip.classList.add('scrolling');
+  });
   const iv=setInterval(()=>{
-    reels.forEach(re=>{
-      if(!re.classList.contains('spinning'))return;
-      const c=+re.dataset.c;
-      [...re.children].forEach(cell=>{cell.innerHTML=cellHTML(randCell(c));cell.classList.remove('wildcell');});
+    reels.forEach(reel=>{
+      const strip=reel.querySelector('.strip');
+      if(!strip.classList.contains('scrolling'))return;
+      const c=+reel.dataset.c;
+      strip.querySelectorAll('.cell').forEach(cell=>{
+        cell.innerHTML=cellHTML(randCell(c));cell.classList.remove('wildcell');
+      });
     });
-  },70);
+  },240);
   for(let c=0;c<COLS;c++){
-    const t=skipReq?40:(380+c*230);
-    await waitSkip(t);
-    reels[c].classList.remove('spinning');
+    await waitSkip(skipReq?40:(420+c*250));
+    const reel=reels[c],strip=reel.querySelector('.strip');
+    strip.classList.remove('scrolling');
+    strip.innerHTML='';
+    for(let r=0;r<ROWS;r++){
+      const cell=document.createElement('div');cell.className='cell';cell.dataset.r=r;
+      strip.appendChild(cell);
+    }
     for(let r=0;r<ROWS;r++) setCell(c,r,g[c][r]);
+    reel.classList.add('stopbounce');
+    setTimeout(()=>reel.classList.remove('stopbounce'),450);
   }
   clearInterval(iv);
 }
@@ -868,6 +959,16 @@ async function showWin(amount){
   if(amount<=0)return;
   $('winamt').textContent='WIN '+abbr(amount);
   $('winpopup').style.display='flex';
+  if(LOADED.UI_COIN){ // coins rise from the total-win counter
+    const gr=$('game').getBoundingClientRect(),tr=$('totalwin').getBoundingClientRect();
+    for(let i=0;i<5;i++){
+      const c=document.createElement('img');c.src=LOADED.UI_COIN;c.className='coinpop';
+      c.style.left=(tr.left-gr.left+(tr.width||120)*rnd())+'px';
+      c.style.top=(tr.top-gr.top)+'px';
+      c.style.animationDelay=(i*0.09)+'s';
+      $('game').appendChild(c);setTimeout(()=>c.remove(),1400);
+    }
+  }
   await countUp($('totalwin'),0,amount,Math.min(1200,400+amount/bet()*80));
   await delay(500);
   $('winpopup').style.display='none';
@@ -1207,7 +1308,7 @@ async function spin(){
   for(const key of res.winCells){
     const[c,r]=key.split('_');
     const el=document.querySelector(`.reel[data-c="${c}"] .cell[data-r="${r}"]`);
-    if(el)el.classList.add('win');
+    if(el){el.classList.add('win');addSparkles(el);}
   }
   if(res.hasWild&&res.fishWin>0){
     for(const[c,r]of res.fishCells.map(f=>[f[0],f[1]])){
@@ -1240,6 +1341,7 @@ async function spin(){
 function updSpinUI(spinning){
   $('spinlabel').innerHTML=spinning?'STOP':(auto?'STOP<br><span class="inf">∞</span>':'SPIN');
   $('spinbtn').classList.toggle('stop',spinning&&!auto);
+  $('spinbtn').classList.toggle('pulse',!spinning&&!auto);
 }
 function updAutoUI(){
   $('autobtn').classList.toggle('on',auto);
