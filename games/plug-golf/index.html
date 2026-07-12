@@ -203,7 +203,7 @@
 
     <div id="hud">
       <div class="logo"><img id="logoMark" class="logoMark" alt="">PLUG<span>GOLF</span></div>
-      <button id="avatar" class="pill"><span id="avFace">😎</span> <b id="avName">Drip</b></button>
+      <div id="avatar" class="pill"><span id="avFace">😎</span> <b id="avName">Drip</b></div>
       <div class="spacer"></div>
       <div class="pill" id="betPill"><button id="betDn">–</button> BET <b id="betV">1.00</b> <button id="betUp">+</button></div>
       <div class="pill"><img id="coinIco" class="ico" alt="">&nbsp;<b id="balV">1000.00</b></div>
@@ -229,13 +229,6 @@
       <h2>How to play &amp; rules</h2>
       <div class="rulesbody" id="rulesBody"></div>
       <button id="rulesClose">Got it</button>
-    </div>
-
-    <div id="charPick" class="hidden">
-      <h2>Pick your golfer</h2>
-      <p class="sub">The Plug roster. Sets your drip — trail, celebration &amp; colours. No effect on odds.</p>
-      <div class="chargrid" id="charGrid"></div>
-      <button id="charClose">Done</button>
     </div>
 
     <button id="lockAim" class="hidden">LOCK AIM&nbsp;✓</button>
@@ -348,13 +341,10 @@ const FLIGHT = {
    Characters are what make this THE PLUG GOLF and not another golf game. Each
    has an accent colour (themes their confetti + result), a face, a trail colour
    for the ball, and their own win call-out. Zero effect on RTP. */
+// Single golfer: Drip. (Roster kept as a one-entry array so the rest of the
+// code — celebration, trail, colours — works unchanged.)
 const CHARACTERS = [
-  {id:'drip', name:'Drip',  tag:'Pure drip',       face:'😎', color:'#39ff7a', trail:'#39ff7a', cel:'TOO MUCH DRIP! 💧', pose:'lean',  burst:'💧'},
-  {id:'ice',  name:'Ice',   tag:'Ice-cold closer', face:'🥶', color:'#5db8ff', trail:'#bfe6ff', cel:'ICE COLD! ❄️',     pose:'cross', burst:'❄️'},
-  {id:'mic',  name:'Mic',   tag:'Rapper energy',   face:'🎤', color:'#ff5db8', trail:'#ff8de1', cel:'DROP THE MIC! 🎤', pose:'mic',   burst:'🎤'},
-  {id:'baller',name:'Baller',tag:'Baller',         face:'⚽', color:'#ffd34d', trail:'#ffe27a', cel:'GOLAZO! ⚽',       pose:'slide', burst:'⚽'},
-  {id:'boss', name:'Boss',  tag:'Influencer',      face:'👑', color:'#c07bff', trail:'#d9b3ff', cel:'BOSS MOVE! 👑',    pose:'crown', burst:'👑'},
-  {id:'ace',  name:'Ace',   tag:'Streetwear pro',  face:'🧢', color:'#ff8c42', trail:'#ffb37a', cel:'ACE VIBES! 🔥',    pose:'flex',  burst:'🔥'}
+  {id:'drip', name:'Drip',  tag:'Pure drip',       face:'😎', color:'#39ff7a', trail:'#39ff7a', cel:'TOO MUCH DRIP! 💧', pose:'lean',  burst:'💧'}
 ];
 function curChar(){ return CHARACTERS[S.character] || CHARACTERS[0]; }
 function loadChar(){ try{ const i=CHARACTERS.findIndex(c=>c.id===localStorage.getItem('plugChar')); return i<0?0:i; }catch(e){ return 0; } }
@@ -611,26 +601,13 @@ $('mute').onclick =()=>{ S.muted=!S.muted; $('mute').textContent=S.muted?'🔇':
 $('showcaseBtn').onclick=()=>{ tone(560,.06,'triangle',.08); $('clubs').classList.add('hidden'); $('showcase').classList.remove('hidden'); };
 $('scClose').onclick=()=>{ tone(440,.06,'sine',.06); $('showcase').classList.add('hidden'); $('clubs').classList.remove('hidden'); };
 
-/* ---------- character picker + avatar ---------- */
+/* ---------- avatar badge (single golfer: Drip) ---------- */
 function renderAvatar(){
   const c=curChar();
-  $('avFace').textContent=c.face; $('avName').textContent=c.name; $('avName').style.color=c.color;
-  document.querySelectorAll('.char').forEach((el,i)=>{
-    el.classList.toggle('on', i===S.character); el.style.setProperty('--pc', CHARACTERS[i].color);
-  });
+  const f=$('avFace'), n=$('avName');
+  if(f) f.textContent=c.face;
+  if(n){ n.textContent=c.name; n.style.color=c.color; }
 }
-(function buildChars(){
-  const grid=$('charGrid');
-  CHARACTERS.forEach((c,i)=>{
-    const el=document.createElement('button');
-    el.className='char'; el.style.setProperty('--pc',c.color);
-    el.innerHTML=`<div class="cf">${c.face}</div><div class="cn" style="color:${c.color}">${c.name}</div><div class="ct">${c.tag}</div>`;
-    el.onclick=()=>{ S.character=i; saveChar(); tone(560,.07,'triangle',.09); renderAvatar(); };
-    grid.appendChild(el);
-  });
-})();
-$('avatar').onclick=()=>{ tone(520,.06,'triangle',.08); $('charPick').classList.remove('hidden'); };
-$('charClose').onclick=()=>{ tone(600,.06,'triangle',.08); $('charPick').classList.add('hidden'); };
 
 /* ---------- rules / info panel (RTP + skill disclosure for compliance) ---------- */
 (function buildRules(){
