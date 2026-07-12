@@ -207,7 +207,7 @@
       <div class="spacer"></div>
       <div class="pill" id="betPill"><button id="betDn">–</button> BET <b id="betV">1.00</b> <button id="betUp">+</button></div>
       <div class="pill"><img id="coinIco" class="ico" alt="">&nbsp;<b id="balV">1000.00</b></div>
-      <button id="info" title="Rules">ⓘ</button>
+      <button id="info">ⓘ</button>
       <button id="mute">🔊</button>
     </div>
 
@@ -1113,28 +1113,69 @@ function roundRectPath(x,y,w,h,r){
   cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r);
   cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath();
 }
+// pre-rendered grass texture (mown diagonal stripes + fine speckle grain), built once.
+let _grassTex=null;
+function grassTex(){
+  if(_grassTex && _grassTex.width===W && _grassTex.height===H) return _grassTex;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const g=c.getContext('2d');
+  // diagonal mow stripes
+  g.save(); g.translate(W/2,H/2); g.rotate(-0.5); g.translate(-W/2,-H/2);
+  g.globalAlpha=.05;
+  for(let x=-H;x<W+H;x+=46){ g.fillStyle= (Math.round(x/46)%2)?'#ffffff':'#0a2a12';
+    g.fillRect(x,-H,23,H*3); }
+  g.restore();
+  // fine grain speckle (deterministic)
+  let seed=1337; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+  for(let i=0;i<1400;i++){
+    const x=rnd()*W, y=rnd()*H, l=1+rnd()*2.4, a=rnd()*0.7;
+    g.globalAlpha=0.05+rnd()*0.06; g.strokeStyle=rnd()<.5?'#8fd07f':'#0e3016';
+    g.lineWidth=1; g.beginPath(); g.moveTo(x,y); g.lineTo(x+Math.cos(a)*l,y-Math.abs(Math.sin(a))*l*2); g.stroke();
+  }
+  _grassTex=c; return c;
+}
 function drawCourse(){
   const th=WEATHER[S.weather];
-  // mainland grass base
+  // mainland grass base — fairway gradient + mown stripes + fine grain, drawn once to an offscreen tile
   const g=cx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#2c6b33'); g.addColorStop(1,'#245a2b');
+  g.addColorStop(0,'#2f7137'); g.addColorStop(.55,'#2a6631'); g.addColorStop(1,'#22562a');
   cx.fillStyle=g; cx.fillRect(0,0,W,H);
-  cx.save(); cx.globalAlpha=.04; cx.fillStyle='#fff';
-  for(let y=0;y<H;y+=54) cx.fillRect(0,y,W,26);
-  cx.globalAlpha=1; cx.restore();
+  cx.drawImage(grassTex(), 0, 0);
+  // soft vignette so the eye settles on the island
+  const vg=cx.createRadialGradient(GC.x,GC.y,120,GC.x,GC.y,Math.max(W,H)*.8);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(4,20,10,.34)');
+  cx.fillStyle=vg; cx.fillRect(0,0,W,H);
   // the lake — layered depth + animated shimmer
   const tSec=performance.now()/1000;
   roundRectPath(LAKE.x-7,LAKE.y-5,LAKE.w+14,LAKE.h+10,LAKE.r+7); cx.fillStyle='#0f4a80'; cx.fill(); // deep edge
   const wg=cx.createLinearGradient(0,LAKE.y,0,LAKE.y+LAKE.h);
-  wg.addColorStop(0,'#2a86c8'); wg.addColorStop(.5,'#1f6fb8'); wg.addColorStop(1,'#175e9c');
+  wg.addColorStop(0,'#2f8fd0'); wg.addColorStop(.5,'#1f6fb8'); wg.addColorStop(1,'#134f8a');
   roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r); cx.fillStyle=wg; cx.fill();
-  cx.save(); roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r); cx.clip();   // caustic shimmer, clipped to water
-  cx.globalAlpha=.07; cx.fillStyle='#cfeaff';
+  cx.save(); roundRectPath(LAKE.x,LAKE.y,LAKE.w,LAKE.h,LAKE.r); cx.clip();   // ripples + caustic shimmer, clipped to water
+  // gentle horizontal ripple bands drifting across the surface
+  cx.lineWidth=1.4;
+  for(let i=0;i<16;i++){
+    const yy=LAKE.y+18+i*36, ph=tSec*0.6+i*0.9, amp=6+(i%3)*3;
+    cx.globalAlpha=0.05+0.03*Math.sin(ph);
+    cx.strokeStyle= i%2 ? '#dff0ff' : '#0d3c68';
+    cx.beginPath();
+    for(let x=LAKE.x-4;x<=LAKE.x+LAKE.w+4;x+=14){
+      const yv=yy+Math.sin(x*0.05+ph)*3;
+      x===LAKE.x-4?cx.moveTo(x,yv):cx.lineTo(x,yv);
+    }
+    cx.stroke();
+  }
+  // caustic highlights
+  cx.globalAlpha=.07; cx.fillStyle='#eaf6ff';
   for(let i=0;i<11;i++){
     const yy=LAKE.y+26+i*52, drift=(i%2?1:-1)*tSec*16;
     const xx=LAKE.x-60+(((i*97+drift)%(LAKE.w+120))+ (LAKE.w+120))%(LAKE.w+120);
     cx.beginPath(); cx.ellipse(xx,yy,24,5,0,0,7); cx.fill();
   }
+  // sun glint down the centre
+  cx.globalAlpha=.10; cx.fillStyle='#ffffff';
+  for(let i=0;i<7;i++){ const yy=LAKE.y+40+i*70+Math.sin(tSec+i)*4;
+    cx.beginPath(); cx.ellipse(LAKE.x+LAKE.w*.62,yy,10,3,0,0,7); cx.fill(); }
   cx.globalAlpha=1; cx.restore();
   // lily pads floating on the lake
   for(const p of LILIES){
@@ -1255,52 +1296,98 @@ function shade(hex,amt){
   const r=Math.max(0,Math.min(255,(n>>16)+amt)), g=Math.max(0,Math.min(255,((n>>8)&255)+amt)), b=Math.max(0,Math.min(255,(n&255)+amt));
   return `rgb(${r},${g},${b})`;
 }
-const SKIN='#e6b98f', SKIN_D='#c99a71';
+const SKIN='#e6b98f', SKIN_D='#c99a71', SKIN_L='#f2cfa6';
+// two-bone IK: solve elbow/knee joint between anchor (sx,sy) and target (hx,hy).
+// bend = +1/-1 chooses which side the joint pops out.
+function ikJoint(sx,sy,hx,hy,l1,l2,bend){
+  let dx=hx-sx, dy=hy-sy, d=Math.hypot(dx,dy)||1e-4;
+  const max=(l1+l2)*0.999;
+  if(d>max){ const k=max/d; dx*=k; dy*=k; hx=sx+dx; hy=sy+dy; d=max; }
+  const base=Math.atan2(dy,dx);
+  const cosA=Math.max(-1,Math.min(1,(l1*l1+d*d-l2*l2)/(2*l1*d)));
+  const ang=Math.acos(cosA);
+  return {jx:sx+Math.cos(base+bend*ang)*l1, jy:sy+Math.sin(base+bend*ang)*l1, hx, hy};
+}
+// a tapered limb segment: fat at the root, slim at the tip, with a rounded cap.
+function limb(ax,ay,bx,by,w0,w1,fill){
+  const a=Math.atan2(by-ay,bx-ax), nx=Math.cos(a+Math.PI/2), ny=Math.sin(a+Math.PI/2);
+  cx.fillStyle=fill; cx.beginPath();
+  cx.moveTo(ax+nx*w0,ay+ny*w0); cx.lineTo(bx+nx*w1,by+ny*w1);
+  cx.lineTo(bx-nx*w1,by-ny*w1); cx.lineTo(ax-nx*w0,ay-ny*w0); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.arc(ax,ay,w0,0,7); cx.fill();
+  cx.beginPath(); cx.arc(bx,by,w1,0,7); cx.fill();
+}
 function drawFigure(x,y,s,o){
   // o: {color, face, armL, armR, legL, legR, lean, club, clubAng, prop, propDy}
-  const col=o.color, dark=shade(col,-34), light=shade(col,46);
+  const col=o.color, dark=shade(col,-40), light=shade(col,44), pants=shade(col,-70);
   cx.save(); cx.translate(x,y); cx.rotate(o.lean||0);
   cx.lineCap='round'; cx.lineJoin='round';
-  const shY=-25*s;                                    // shoulder line
-  const hL={x:Math.cos(o.armL)*16*s-7*s, y:shY+Math.sin(o.armL)*16*s};
-  const hR={x:Math.cos(o.armR)*16*s+7*s, y:shY+Math.sin(o.armR)*16*s};
-  // --- legs (skin + trainers) ---
-  cx.strokeStyle=SKIN; cx.lineWidth=6.5*s;
-  const foot=(ang)=>({x:Math.cos(ang)*17*s, y:15*s+Math.sin(ang)*6*s});
-  for(const ang of [o.legL,o.legR]){ const e=foot(ang);
-    cx.beginPath(); cx.moveTo(0,-3*s); cx.lineTo(e.x,e.y); cx.stroke();
-    cx.fillStyle='#f2f4f5'; cx.beginPath(); cx.ellipse(e.x+Math.cos(ang)*3*s, e.y+3*s, 6*s,3.4*s, 0,0,7); cx.fill();
-    cx.fillStyle=col; cx.beginPath(); cx.ellipse(e.x+Math.cos(ang)*3*s, e.y+2*s, 6*s,1.6*s, 0,0,7); cx.fill();
-  }
-  // --- shorts ---
-  cx.fillStyle=dark; cx.beginPath(); cx.roundRect(-10*s,-8*s,20*s,12*s,5*s); cx.fill();
-  // --- back arm (drawn behind torso) ---
-  cx.strokeStyle=dark; cx.lineWidth=6*s;
-  cx.beginPath(); cx.moveTo(-7*s,shY); cx.lineTo(hL.x,hL.y); cx.stroke();
-  cx.fillStyle=SKIN; cx.beginPath(); cx.arc(hL.x,hL.y,3.4*s,0,7); cx.fill();
-  // --- torso (jersey) ---
-  cx.fillStyle=col; cx.beginPath(); cx.roundRect(-11*s,-31*s,22*s,26*s,8*s); cx.fill();
-  cx.save(); cx.beginPath(); cx.roundRect(-11*s,-31*s,22*s,26*s,8*s); cx.clip();
-  cx.fillStyle=dark; cx.fillRect(3*s,-31*s,9*s,26*s);                         // side shade
-  cx.fillStyle=light; cx.beginPath(); cx.roundRect(-2.5*s,-31*s,5*s,26*s,1*s); cx.fill(); // centre stripe
-  cx.restore();
-  cx.fillStyle=light; cx.beginPath(); cx.roundRect(-6*s,-31*s,12*s,4*s,2*s); cx.fill();   // collar
-  // --- front arm ---
-  cx.strokeStyle=col; cx.lineWidth=6*s;
-  cx.beginPath(); cx.moveTo(7*s,shY); cx.lineTo(hR.x,hR.y); cx.stroke();
-  cx.fillStyle=SKIN; cx.beginPath(); cx.arc(hR.x,hR.y,3.6*s,0,7); cx.fill();
-  // --- club held between the hands ---
+  const shY=-26*s, hipY=-3*s, shX=6.5*s, hipX=4*s;      // shoulder / hip anchors
+  // hands driven by the pose angles (reach kept < full arm length → elbows bend)
+  const hL={x:Math.cos(o.armL)*15*s-shX, y:shY+Math.sin(o.armL)*15*s};
+  const hR={x:Math.cos(o.armR)*15*s+shX, y:shY+Math.sin(o.armR)*15*s};
+  const foot=(ang)=>({x:Math.cos(ang)*15*s, y:16*s+Math.sin(ang)*6*s});
+  const drawLeg=(hx,ang,front)=>{
+    const f=foot(ang), knee=ikJoint(hx,hipY,f.x,f.y,11*s,11*s,-1);
+    const lp=front?pants:shade(pants,-14);
+    limb(hx,hipY,knee.jx,knee.jy,6.5*s,5*s,lp);              // thigh
+    limb(knee.jx,knee.jy,f.x,f.y,5*s,3.4*s,lp);              // shin
+    // shoe
+    const sole=shade(col,-10), dir=Math.cos(ang)>=0?1:-1;
+    cx.fillStyle='#20242a'; cx.beginPath(); cx.ellipse(f.x+dir*3*s,f.y+3.5*s,7*s,3.2*s,0,0,7); cx.fill();
+    cx.fillStyle='#f4f6f7'; cx.beginPath(); cx.ellipse(f.x+dir*2*s,f.y+1.5*s,6.4*s,3.6*s,0,0,7); cx.fill();
+    cx.fillStyle=sole; cx.beginPath(); cx.ellipse(f.x-dir*1.5*s,f.y+0.5*s,3.4*s,3*s,0,0,7); cx.fill();
+  };
+  const drawArm=(sx,hand,bend,sleeveFill,skinFill)=>{
+    const el=ikJoint(sx,shY,hand.x,hand.y,10*s,10*s,bend);
+    limb(sx,shY,el.jx,el.jy,5.4*s,4*s,sleeveFill);            // upper (sleeve)
+    limb(el.jx,el.jy,hand.x,hand.y,3.6*s,2.8*s,skinFill);     // forearm (skin)
+    cx.fillStyle=SKIN_D; cx.beginPath(); cx.arc(hand.x,hand.y,3.4*s,0,7); cx.fill(); // glove/hand
+  };
+  // --- back leg + back arm (behind torso) ---
+  drawLeg(-hipX,o.legL,false);
+  drawArm(-shX,hL,+1,dark,SKIN_D);
+  // --- club held between the two hands ---
   if(o.club){
-    cx.save(); cx.translate((hL.x+hR.x)/2,(hL.y+hR.y)/2); cx.rotate(o.clubAng);
-    cx.strokeStyle='#c9d2d7'; cx.lineWidth=3*s;
-    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(0,46*s); cx.stroke();
-    cx.fillStyle='#9aa6ad'; cx.beginPath(); cx.ellipse(4*s,46*s,7*s,3.4*s,0,0,7); cx.fill();
+    const gx=(hL.x+hR.x)/2, gy=(hL.y+hR.y)/2;
+    cx.save(); cx.translate(gx,gy); cx.rotate(o.clubAng);
+    cx.strokeStyle='#20242a'; cx.lineWidth=4.4*s; cx.beginPath(); cx.moveTo(0,-6*s); cx.lineTo(0,0); cx.stroke(); // grip
+    const sh=cx.createLinearGradient(-2*s,0,2*s,0); sh.addColorStop(0,'#eef2f4'); sh.addColorStop(.5,'#b9c3c9'); sh.addColorStop(1,'#8b959b');
+    cx.strokeStyle=sh; cx.lineWidth=2.6*s; cx.beginPath(); cx.moveTo(0,0); cx.lineTo(0,48*s); cx.stroke(); // shaft
+    cx.fillStyle='#c3ccd1'; cx.beginPath(); cx.moveTo(-1.3*s,48*s); cx.quadraticCurveTo(11*s,45*s,10*s,52*s); cx.quadraticCurveTo(3*s,53*s,-1.3*s,49*s); cx.fill(); // head
     cx.restore();
   }
-  // --- head: neck + emoji face on a skin disc ---
-  cx.fillStyle=SKIN_D; cx.fillRect(-3*s,-33*s,6*s,5*s);
-  cx.font=`${25*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText(o.face, 0, -40*s);
+  // --- pelvis / belt ---
+  cx.fillStyle=pants; cx.beginPath(); cx.roundRect(-9*s,-9*s,18*s,11*s,5*s); cx.fill();
+  cx.fillStyle=shade(pants,-20); cx.fillRect(-9*s,-9*s,18*s,2.2*s);
+  // --- torso (polo shirt) ---
+  cx.beginPath(); cx.moveTo(-10*s,-30*s);
+  cx.quadraticCurveTo(-12*s,-16*s,-9*s,-6*s); cx.lineTo(9*s,-6*s);
+  cx.quadraticCurveTo(12*s,-16*s,10*s,-30*s); cx.quadraticCurveTo(0,-33*s,-10*s,-30*s); cx.closePath();
+  cx.fillStyle=col; cx.fill();
+  cx.save(); cx.clip();
+  cx.fillStyle=dark; cx.beginPath(); cx.moveTo(2*s,-33*s); cx.lineTo(12*s,-33*s); cx.lineTo(12*s,2*s); cx.lineTo(4*s,2*s); cx.fill(); // side shade
+  cx.strokeStyle=light; cx.lineWidth=1.6*s; cx.beginPath(); cx.moveTo(0,-28*s); cx.lineTo(0,-8*s); cx.stroke(); // placket
+  cx.restore();
+  // collar
+  cx.fillStyle=light; cx.beginPath();
+  cx.moveTo(-6*s,-30*s); cx.lineTo(-1.5*s,-25*s); cx.lineTo(0,-29*s); cx.lineTo(1.5*s,-25*s); cx.lineTo(6*s,-30*s);
+  cx.quadraticCurveTo(0,-32*s,-6*s,-30*s); cx.closePath(); cx.fill();
+  // --- front arm ---
+  drawArm(shX,hR,-1,col,SKIN_L);
+  // --- head: neck, skin head, cap, emoji face ---
+  cx.fillStyle=SKIN_D; cx.beginPath(); cx.roundRect(-3*s,-33*s,6*s,5*s,2*s); cx.fill();     // neck
+  const hx=0.6*s, hy=-42*s, hr=8.5*s;
+  cx.fillStyle=SKIN; cx.beginPath(); cx.ellipse(hx,hy,hr,hr*1.05,0,0,7); cx.fill();           // head
+  cx.fillStyle=SKIN_D; cx.beginPath(); cx.ellipse(hx+hr*0.85,hy+1*s,2.4*s,3.4*s,0,0,7); cx.fill(); // ear
+  // cap (crown + brim) in character colour
+  cx.fillStyle=col; cx.beginPath(); cx.ellipse(hx,hy-3*s,hr*1.02,hr*0.92,0,Math.PI,0); cx.fill();
+  cx.fillStyle=dark; cx.beginPath(); cx.ellipse(hx,hy-3*s,hr*1.02,hr*0.92,0,Math.PI+0.5,Math.PI+1.4); cx.fill();
+  cx.fillStyle=light; cx.beginPath(); cx.arc(hx-1*s,hy-9*s,1.8*s,0,7); cx.fill();              // button
+  cx.fillStyle=dark; cx.beginPath(); cx.ellipse(hx+6*s,hy-5*s,9*s,3*s,0.15,0,7); cx.fill();    // brim
+  // emoji face carries character identity
+  cx.font=`${13*s}px serif`; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(o.face, hx, hy+2.5*s);
   // --- prop emoji near the raised hand ---
   if(o.prop){ cx.font=`${18*s}px serif`; cx.fillText(o.prop, hR.x, hR.y+(o.propDy||0)); }
   cx.restore();
