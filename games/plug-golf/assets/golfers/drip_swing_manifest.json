@@ -1,0 +1,330 @@
+{
+  "character": "drip",
+  "format": "RGBA PNG",
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "spacing": 0,
+    "margin": 0
+  },
+  "frame_order": [
+    "00_address",
+    "01_takeaway",
+    "02_backswing",
+    "03_top",
+    "04_downswing",
+    "05_impact",
+    "06_follow_through",
+    "07_finish"
+  ],
+  "frame_durations_ms": [
+    110,
+    80,
+    90,
+    100,
+    55,
+    45,
+    85,
+    180
+  ],
+  "sizes": {
+    "1x": {
+      "frame_width": 256,
+      "frame_height": 320,
+      "sheet_width": 1024,
+      "sheet_height": 640,
+      "recommended_hip_pivot": {
+        "x": 150,
+        "y": 188
+      },
+      "ground_anchor": {
+        "x": 150,
+        "y": 300
+      }
+    },
+    "2x": {
+      "frame_width": 512,
+      "frame_height": 640,
+      "sheet_width": 2048,
+      "sheet_height": 1280,
+      "recommended_hip_pivot": {
+        "x": 300,
+        "y": 376
+      },
+      "ground_anchor": {
+        "x": 300,
+        "y": 600
+      }
+    }
+  },
+  "clubs": {
+    "iron": {
+      "sheet_1x": "drip_iron_swing.png",
+      "sheet_2x": "drip_iron_swing@2x.png",
+      "frames_2x": "drip_iron_frames_2x/"
+    },
+    "3wood": {
+      "sheet_1x": "drip_3wood_swing.png",
+      "sheet_2x": "drip_3wood_swing@2x.png",
+      "frames_2x": "drip_3wood_frames_2x/"
+    },
+    "driver": {
+      "sheet_1x": "drip_driver_swing.png",
+      "sheet_2x": "drip_driver_swing@2x.png",
+      "frames_2x": "drip_driver_frames_2x/"
+    }
+  },
+  "default_aliases": {
+    "drip_swing.png": "drip_iron_swing.png",
+    "drip_swing@2x.png": "drip_iron_swing@2x.png",
+    "golfer_drip.png": "drip_iron_swing.png"
+  },
+  "per_frame_metadata": {
+    "iron": [
+      {
+        "index": 0,
+        "name": "00_address",
+        "content_bbox_2x": [
+          191,
+          175,
+          219,
+          427
+        ]
+      },
+      {
+        "index": 1,
+        "name": "01_takeaway",
+        "content_bbox_2x": [
+          43,
+          187,
+          388,
+          422
+        ]
+      },
+      {
+        "index": 2,
+        "name": "02_backswing",
+        "content_bbox_2x": [
+          149,
+          128,
+          279,
+          481
+        ]
+      },
+      {
+        "index": 3,
+        "name": "03_top",
+        "content_bbox_2x": [
+          182,
+          134,
+          244,
+          475
+        ]
+      },
+      {
+        "index": 4,
+        "name": "04_downswing",
+        "content_bbox_2x": [
+          190,
+          196,
+          249,
+          405
+        ]
+      },
+      {
+        "index": 5,
+        "name": "05_impact",
+        "content_bbox_2x": [
+          192,
+          202,
+          251,
+          399
+        ]
+      },
+      {
+        "index": 6,
+        "name": "06_follow_through",
+        "content_bbox_2x": [
+          181,
+          171,
+          229,
+          430
+        ]
+      },
+      {
+        "index": 7,
+        "name": "07_finish",
+        "content_bbox_2x": [
+          205,
+          171,
+          178,
+          430
+        ]
+      }
+    ],
+    "3wood": [
+      {
+        "index": 0,
+        "name": "00_address",
+        "content_bbox_2x": [
+          196,
+          177,
+          213,
+          424
+        ]
+      },
+      {
+        "index": 1,
+        "name": "01_takeaway",
+        "content_bbox_2x": [
+          36,
+          186,
+          397,
+          424
+        ]
+      },
+      {
+        "index": 2,
+        "name": "02_backswing",
+        "content_bbox_2x": [
+          145,
+          123,
+          285,
+          487
+        ]
+      },
+      {
+        "index": 3,
+        "name": "03_top",
+        "content_bbox_2x": [
+          187,
+          126,
+          236,
+          484
+        ]
+      },
+      {
+        "index": 4,
+        "name": "04_downswing",
+        "content_bbox_2x": [
+          192,
+          197,
+          257,
+          404
+        ]
+      },
+      {
+        "index": 5,
+        "name": "05_impact",
+        "content_bbox_2x": [
+          192,
+          196,
+          256,
+          405
+        ]
+      },
+      {
+        "index": 6,
+        "name": "06_follow_through",
+        "content_bbox_2x": [
+          185,
+          167,
+          212,
+          434
+        ]
+      },
+      {
+        "index": 7,
+        "name": "07_finish",
+        "content_bbox_2x": [
+          205,
+          173,
+          186,
+          428
+        ]
+      }
+    ],
+    "driver": [
+      {
+        "index": 0,
+        "name": "00_address",
+        "content_bbox_2x": [
+          192,
+          171,
+          219,
+          430
+        ]
+      },
+      {
+        "index": 1,
+        "name": "01_takeaway",
+        "content_bbox_2x": [
+          22,
+          190,
+          411,
+          419
+        ]
+      },
+      {
+        "index": 2,
+        "name": "02_backswing",
+        "content_bbox_2x": [
+          162,
+          195,
+          262,
+          414
+        ]
+      },
+      {
+        "index": 3,
+        "name": "03_top",
+        "content_bbox_2x": [
+          180,
+          144,
+          246,
+          457
+        ]
+      },
+      {
+        "index": 4,
+        "name": "04_downswing",
+        "content_bbox_2x": [
+          186,
+          193,
+          262,
+          408
+        ]
+      },
+      {
+        "index": 5,
+        "name": "05_impact",
+        "content_bbox_2x": [
+          193,
+          193,
+          248,
+          408
+        ]
+      },
+      {
+        "index": 6,
+        "name": "06_follow_through",
+        "content_bbox_2x": [
+          168,
+          186,
+          242,
+          415
+        ]
+      },
+      {
+        "index": 7,
+        "name": "07_finish",
+        "content_bbox_2x": [
+          203,
+          170,
+          197,
+          431
+        ]
+      }
+    ]
+  }
+}
