@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>PLUG GOLF — Prototype</title>
 <style>
   :root{
@@ -344,13 +346,20 @@ async function rgsCall(path, body){
 const W = 420, H = 760;
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
 function fit(){
-  const s = Math.min(innerWidth/W, (innerHeight-8)/H, 1.15);
+  // visualViewport tracks the REAL visible area on phones (collapsing address
+  // bars, artifact-viewer chrome, iframes) — innerHeight lies during scroll.
+  const vw = (window.visualViewport && visualViewport.width)  || innerWidth;
+  const vh = (window.visualViewport && visualViewport.height) || innerHeight;
+  const s = Math.min(vw/W, (vh-8)/H, 1.15);
   cv.style.width = (W*s)+'px'; cv.style.height = (H*s)+'px';
   const d = Math.min(devicePixelRatio||1, 2);
   cv.width = W*d; cv.height = H*d; cx.setTransform(d,0,0,d,0,0);
   document.getElementById('stage').style.width = (W*s)+'px';
 }
-addEventListener('resize', fit); fit();
+addEventListener('resize', fit);
+addEventListener('orientationchange', ()=>setTimeout(fit,120));
+if(window.visualViewport) visualViewport.addEventListener('resize', fit);
+fit();
 
 /* ---------- course geometry: an ISLAND GREEN ----------
    The green is a landmass in the middle of a lake, ringed by a sandy shore,
