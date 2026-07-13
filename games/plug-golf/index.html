@@ -196,6 +196,14 @@
   #holeCard .hc1{font-size:9.5px;font-weight:800;letter-spacing:3px;color:var(--plug);text-transform:uppercase;text-shadow:0 1px 6px rgba(0,0,0,.8)}
   #holeCard .hc2{font-size:17px;font-weight:900;font-style:italic;letter-spacing:1px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.85)}
   #holeCard .hc3{font-size:10px;font-weight:700;letter-spacing:2px;color:#cfe3d5;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+  #commBar{position:absolute;left:50%;bottom:40px;transform:translateX(-50%) translateY(16px);opacity:0;z-index:5;
+           pointer-events:none;display:flex;align-items:center;gap:7px;max-width:88%;white-space:nowrap;
+           background:linear-gradient(90deg,rgba(6,10,8,.88),rgba(6,10,8,.78));border:1px solid rgba(120,150,132,.22);
+           border-left:3px solid #ff4545;border-radius:8px;padding:6px 13px 6px 9px;
+           transition:opacity .3s,transform .3s cubic-bezier(.2,1,.3,1)}
+  #commBar.show{opacity:1;transform:translateX(-50%)}
+  #commBar b{font-size:8.5px;font-weight:900;letter-spacing:1.8px;color:#ff8a8a}
+  #commBar span{font-size:12px;font-weight:700;font-style:italic;color:#f2f7f4;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -245,6 +253,7 @@
       <div class="l3name">DRIP <span>PLUG TOUR</span></div>
       <div class="l3sub" id="l3sub"></div>
     </div>
+    <div id="commBar"><b>🎙 TOWER</b><span id="commTxt"></span></div>
 
     <div id="clubs">
       <h2>Pick your club</h2>
@@ -508,6 +517,7 @@ const S = {
   ball:{x:TEE.x, y:TEE.y, alt:0, on:true, scale:1},
   tl:null, particles:[], rain:[],
   tracer:[], tracerA:0,                              /* broadcast shot-tracer arc */
+  hitch:0, punch:0,                                  /* impact freeze-frame + zoom punch */
   outcome:null, rest:null, distM:null, riding:false, speed:1,
   /* broadcast camera + replay */
   camMode:'wide', cam:{x:210, y:342, z:1, r:0}, flash:0, lb:0, ballTrail:[],
@@ -772,7 +782,7 @@ function toClub(){
   $('clubs').classList.remove('hidden'); $('result').classList.add('hidden');
   $('showcase').classList.add('hidden');
   $('lockAim').classList.add('hidden'); prompt('');
-  broadcastOut();
+  broadcastOut(); commOff();
   newRoundCosmetics();
 }
 function toAim(){
@@ -782,7 +792,7 @@ function toAim(){
   $('lockAim').classList.remove('hidden');
   newRoundCosmetics();                               // fresh wind/weather BEFORE we display them
   prompt('Drag the target to aim','wind '+S.wind.spd+' m/s · '+WEATHER[S.weather].name);
-  broadcastIn();
+  broadcastIn(); commOff();
 }
 /* ---------- broadcast package: yardages, lower-third, hole card ---------- */
 const HOLE_YDS={wedge:96, shortIron:118, longIron:142, threeWood:165, driver:188, masters:172};
@@ -805,6 +815,33 @@ function broadcastOut(){
   $('lower3').classList.remove('show'); $('holeCard').classList.remove('show');
   clearTimeout(hcTimer);
 }
+/* ---------- tower commentary — broadcast one-liners that react to the shot ---------- */
+const COMM={
+  launch:["He's taking dead aim at that flag…","All eyes on the island.","No bail-out here — he's committed.",
+          "The 17th. Nowhere to hide.","Crowd's gone quiet at the tee…"],
+  lose:["That's WET. Oh, that hurts.","The island claims another one.","SPLASH — and the crowd groans.",
+        "Gone swimming. Brutal.","The water says thank you."],
+  rough:["Just leaks off the putting surface.","That'll settle in the cabbage.","Missed his spot — he's scrambling."],
+  bunker:["Found the sand. Beach party.","Plugged in the bunker — tough break.","Caught the trap on the fly."],
+  fringe:["Caught the collar — so close to great.","Just a fringe visitor.","One roll from the dance floor."],
+  green:["Safely on the dance floor.","On the green — good leave.","Found the putting surface. Job done."],
+  closePutt:["That's ALL over the flag!","Great strike — pin high!","He's given himself a real look."],
+  tapIn:["Pin-seeker! That's stone dead.","DIALLED. Kick-in range.","Threw a dart at it!"],
+  lipOut:["IT LOOKED IN ALL THE WAY— LIP OUT!","How did that stay out?!","The golf gods said no. Agonising."],
+  holeIn:["GET IN THE HOLE— IT'S IN!! UNBELIEVABLE!!","HOLE IN ONE AT THE ISLAND!! SCENES!!","HE'S DONE IT!! ONE SWING!!"]
+};
+let commT1=null, commT2=null;
+function commentate(key,delay){
+  const lines=COMM[key]; if(!lines) return;
+  const show=()=>{
+    $('commTxt').textContent=lines[Math.floor(Math.random()*lines.length)];
+    $('commBar').classList.add('show');
+    clearTimeout(commT2); commT2=setTimeout(()=>$('commBar').classList.remove('show'), 2800);
+  };
+  clearTimeout(commT1);
+  if(delay) commT1=setTimeout(show, delay*1000); else show();
+}
+function commOff(){ clearTimeout(commT1); clearTimeout(commT2); $('commBar').classList.remove('show'); }
 function toPower(){
   S.phase='power'; S.pull=0;
   $('lockAim').classList.add('hidden');
@@ -847,6 +884,7 @@ async function swing(){
   S.phase='flight';
   S.tracer.length=0; S.tracerA=1;                            // arm the shot tracer
   broadcastOut();                                            // clear graphics for the shot
+  if(Math.random()<0.55) commentate('launch',0.5);           // tower picks up the shot
   $('lockAim').classList.add('hidden');
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
   S.swingT=0; S.swungImpact=false;                           // golfer swings; impact fires the strike
@@ -975,7 +1013,7 @@ function bounceSeg(from,to,h,dur,opts){
   return seg(dur,k=>{
     S.ball.x=lerp(from.x,to.x,k); S.ball.y=lerp(from.y,to.y,k);
     S.ball.alt=Math.sin(Math.PI*k)*h;
-  },withCam(opts,()=>{ sBounce(); landCam(); }));
+  },withCam(opts,()=>{ sBounce(); landCam(); S.punch=Math.max(S.punch,.4); }));
 }
 function rollSeg(from,to,dur,opts){
   return seg(dur,k=>{
@@ -1170,6 +1208,7 @@ function tickReplay(dt){
 /* ---------- result ---------- */
 function toResult(){
   S.tl=null; $('vign').classList.remove('on');
+  commentate(S.outcome.tier);                      // tower reacts to the result
   /* hole-in-ones get an automatic broadcast replay before the result card */
   if(S.outcome.mult>=25 && !S.replayed){ S.replayed=true; startReplay(()=>celebrateThen(showResult)); return; }
   celebrateThen(showResult);
@@ -1481,6 +1520,26 @@ function drawCourse(){
     mg.addColorStop(0,'#7dffab'); mg.addColorStop(1,'#1d9e4e');
     cx.fillStyle=mg; cx.beginPath(); cx.arc(TEE.x+mx,TEE.y-14,3.4,0,7); cx.fill();
   }
+  drawCloudShadows(tSec);
+}
+/* slow cloud shadows drifting over land and water — the cheapest "alive" there is */
+const CLOUDS=[
+  {y:170, rx:170, ry:95,  s:7,   ph:0.0},
+  {y:520, rx:210, ry:120, s:5.2, ph:2.1},
+  {y:-30, rx:150, ry:90,  s:6.1, ph:4.4}
+];
+function drawCloudShadows(t){
+  const th=WEATHER[S.weather];
+  const alpha = th.name==='Rain'?0.11 : th.name==='Night'?0.045 : 0.075;
+  for(const c of CLOUDS){
+    const px=(((t*c.s + c.ph*130) % (W+560))+(W+560))%(W+560) - 280;
+    const py=c.y + Math.sin(t*0.05+c.ph)*22;
+    const gcl=cx.createRadialGradient(px,py,10,px,py,c.rx);
+    gcl.addColorStop(0,`rgba(4,14,8,${alpha})`);
+    gcl.addColorStop(.65,`rgba(4,14,8,${alpha*.65})`);
+    gcl.addColorStop(1,'rgba(4,14,8,0)');
+    cx.fillStyle=gcl; cx.beginPath(); cx.ellipse(px,py,c.rx,c.ry,0.25,0,7); cx.fill();
+  }
 }
 function drawAimUI(){
   if(S.phase!=='aim' && S.phase!=='power') return;
@@ -1695,6 +1754,7 @@ function drawCelebration(){
 function shake(mag,dur){ S.shake={t:dur,dur:dur,mag}; }
 function impactFx(){
   sHit(); shake(2,0.14);
+  S.hitch=0.06; S.punch=1;                 // freeze the strike frame + camera zoom pop
   // divot: turf + grass flecks kick up from the strike (world-space, on the tee)
   for(let i=0;i<9;i++){ const a=-Math.PI/2+spread_(1.1), v=45+Math.random()*85;
     S.particles.push({type:'dot',world:true,x:TEE.x+spread_(6),y:TEE.y-4,
@@ -1895,7 +1955,10 @@ function drawWeather(dt){
 /* ---------- main loop ---------- */
 let last=performance.now();
 function frame(now){
-  const dt=Math.min(.05,(now-last)/1000); last=now;
+  const raw=Math.min(.05,(now-last)/1000); last=now;
+  let dt=raw;
+  if(S.hitch>0){ S.hitch-=raw; dt=0; }               // impact freeze-frame: world holds, render continues
+  if(S.punch>0) S.punch=Math.max(0,S.punch-raw*5);   // zoom punch decay
   if(S.phase==='replay') tickReplay(dt); else tickTL(dt);
   if(S.phase==='flight') record(dt);
   if(S.swingT!=null){
@@ -1914,7 +1977,8 @@ function frame(now){
   if(S.shake.t>0){ S.shake.t-=dt; const f=Math.max(0,S.shake.t/S.shake.dur); shx=spread_(1)*S.shake.mag*f; shy=spread_(1)*S.shake.mag*f; }
   // world pass, through the broadcast camera (+ shake)
   cx.save();
-  cx.translate(W/2+shx,AY+shy); cx.rotate(S.cam.r); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
+  const zp=S.cam.z*(1+S.punch*0.05);                 // zoom pop rides on top of the broadcast cam
+  cx.translate(W/2+shx,AY+shy); cx.rotate(S.cam.r); cx.scale(zp,zp); cx.translate(-S.cam.x,-S.cam.y);
   drawCourse();
   drawGallery();
   drawAimUI();
