@@ -819,6 +819,9 @@ function broadcastOut(){
 const COMM={
   launch:["He's taking dead aim at that flag…","All eyes on the island.","No bail-out here — he's committed.",
           "The 17th. Nowhere to hide.","Crowd's gone quiet at the tee…"],
+  pure:["FLUSHED. Listen to that strike.","Oh, that's PURED — dead at it.","Right out of the middle. Butter.",
+        "That sound. That's the one."],
+  inAir:["Be right…","Get down!!","Sit down… SIT.","Swallow it…","One time, golf ball…","Hold your line…"],
   lose:["That's WET. Oh, that hurts.","The island claims another one.","SPLASH — and the crowd groans.",
         "Gone swimming. Brutal.","The water says thank you."],
   rough:["Just leaks off the putting surface.","That'll settle in the cabbage.","Missed his spot — he's scrambling."],
@@ -830,18 +833,19 @@ const COMM={
   lipOut:["IT LOOKED IN ALL THE WAY— LIP OUT!","How did that stay out?!","The golf gods said no. Agonising."],
   holeIn:["GET IN THE HOLE— IT'S IN!! UNBELIEVABLE!!","HOLE IN ONE AT THE ISLAND!! SCENES!!","HE'S DONE IT!! ONE SWING!!"]
 };
-let commT1=null, commT2=null;
-function commentate(key,delay){
+let commTimers=[], commV=0;
+function commentate(key,delay,guard){
   const lines=COMM[key]; if(!lines) return;
   const show=()=>{
+    if(guard && !guard()) return;                            // line no longer applies — stay quiet
+    const v=++commV;
     $('commTxt').textContent=lines[Math.floor(Math.random()*lines.length)];
     $('commBar').classList.add('show');
-    clearTimeout(commT2); commT2=setTimeout(()=>$('commBar').classList.remove('show'), 2800);
+    commTimers.push(setTimeout(()=>{ if(v===commV) $('commBar').classList.remove('show'); }, 2800));
   };
-  clearTimeout(commT1);
-  if(delay) commT1=setTimeout(show, delay*1000); else show();
+  if(delay) commTimers.push(setTimeout(show, delay*1000)); else show();
 }
-function commOff(){ clearTimeout(commT1); clearTimeout(commT2); $('commBar').classList.remove('show'); }
+function commOff(){ commTimers.forEach(clearTimeout); commTimers=[]; $('commBar').classList.remove('show'); }
 function toPower(){
   S.phase='power'; S.pull=0;
   $('lockAim').classList.add('hidden');
@@ -884,7 +888,10 @@ async function swing(){
   S.phase='flight';
   S.tracer.length=0; S.tracerA=1;                            // arm the shot tracer
   broadcastOut();                                            // clear graphics for the shot
-  if(Math.random()<0.55) commentate('launch',0.5);           // tower picks up the shot
+  const inFlight=()=>S.phase==='flight';                     // guards: only speak while it still applies
+  if(S.quality>0.92) commentate('pure',0.45,inFlight);       // the tower hears a flushed one
+  else if(Math.random()<0.55) commentate('launch',0.5,inFlight);
+  if(Math.random()<0.7) commentate('inAir',1.9,()=>S.phase==='flight'&&S.ball.on); // urging it mid-air
   $('lockAim').classList.add('hidden');
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
   S.swingT=0; S.swungImpact=false;                           // golfer swings; impact fires the strike
@@ -1033,7 +1040,7 @@ function dropSeg(opts){
   return seg(0.38,k=>{
     S.ball.x=lerp(S.ball.x,GC.x,k*.4); S.ball.y=lerp(S.ball.y,GC.y,k*.4);
     S.ball.scale=1-k*.9; if(k>=1) S.ball.on=false;
-  },withCam(opts,()=>{ sDrop(); landCam(); }));
+  },withCam(opts,()=>{ sDrop(); landCam(); S.hitch=0.05; S.punch=Math.max(S.punch,.55); })); // sink stop
 }
 function pauseSeg(dur,opts){ return seg(dur,()=>{},opts); }
 
@@ -1754,7 +1761,8 @@ function drawCelebration(){
 function shake(mag,dur){ S.shake={t:dur,dur:dur,mag}; }
 function impactFx(){
   sHit(); shake(2,0.14);
-  S.hitch=0.06; S.punch=1;                 // freeze the strike frame + camera zoom pop
+  const pure=S.quality>0.92;               // a flushed strike earns a longer, harder hit-stop
+  S.hitch=pure?0.095:0.06; S.punch=pure?1.35:1;
   // divot: turf + grass flecks kick up from the strike (world-space, on the tee)
   for(let i=0;i<9;i++){ const a=-Math.PI/2+spread_(1.1), v=45+Math.random()*85;
     S.particles.push({type:'dot',world:true,x:TEE.x+spread_(6),y:TEE.y-4,
