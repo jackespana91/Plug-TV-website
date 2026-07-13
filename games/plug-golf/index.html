@@ -453,10 +453,12 @@ function drawGolferSprite(wx,wy,frame){
   const im=SPRITE.imgs[spriteVariant()]; if(!im) return;
   const s=SPRITE.scale, col=frame%SPRITE.cols, row=(frame/SPRITE.cols)|0;
   const dw=SPRITE.fw*s, dh=SPRITE.fh*s;
-  const dx=wx-SPRITE.ax*s, dy=wy-SPRITE.ay*s;
+  // billboard: counter-rotate so the golfer stays upright in the reverse angle
+  cx.save(); cx.translate(wx,wy); cx.rotate(-S.cam.r);
   cx.fillStyle='rgba(0,0,0,.30)';                       // contact shadow under the feet
-  cx.beginPath(); cx.ellipse(wx, wy-1, dw*0.30, dw*0.075, 0,0,7); cx.fill();
-  cx.drawImage(im, col*SPRITE.fw, row*SPRITE.fh, SPRITE.fw, SPRITE.fh, dx, dy, dw, dh);
+  cx.beginPath(); cx.ellipse(0, -1, dw*0.30, dw*0.075, 0,0,7); cx.fill();
+  cx.drawImage(im, col*SPRITE.fw, row*SPRITE.fh, SPRITE.fw, SPRITE.fh, -SPRITE.ax*s, -SPRITE.ay*s, dw, dh);
+  cx.restore();
 }
 // the sprite carries its own ball through the strike; hide the game ball until launch
 function ballHiddenForSprite(){
@@ -476,7 +478,7 @@ const S = {
   tracer:[], tracerA:0,                              /* broadcast shot-tracer arc */
   outcome:null, rest:null, distM:null, riding:false, speed:1,
   /* broadcast camera + replay */
-  camMode:'wide', cam:{x:210, y:342, z:1}, flash:0, lb:0, ballTrail:[],
+  camMode:'wide', cam:{x:210, y:342, z:1, r:0}, flash:0, lb:0, ballTrail:[],
   swingT:null, celebrate:null, shake:{t:0,dur:1,mag:0}, swungImpact:false,
   rec:[], recT:0, replayed:false, replayT:0, replayIdx:0, replayEnd:0,
   replayDone:null, prevOn:true, forceMult:null
@@ -835,31 +837,40 @@ const easeOut=k=>1-Math.pow(1-k,3);
    Identity view during club/aim/power so pointer input needs no un-projection. */
 const AY = 342;                                    // screen anchor line for the camera
 function camTarget(){
-  if(S.phase==='replay') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.5, z:2.1};
+  /* r = camera roll. The tee cam is a REVERSE ANGLE: the world turns +90° so the
+     green lies screen-right — the exact line the face-on golfer swings along.
+     As the cam whips to tracking, r eases back to 0 (the sweep back to north-up). */
+  if(S.phase==='replay') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.5, z:2.1, r:0};
   if((S.phase==='flight'||S.phase==='result') && S.camMode!=='wide'){
-    if(S.camMode==='tee')   return {x:TEE.x, y:TEE.y-50, z:1.5};
-    if(S.camMode==='track') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.45, z:1.18};
-    if(S.camMode==='land')  return {x:S.ball.x, y:S.ball.y, z:1.7};
+    if(S.camMode==='tee')   return {x:TEE.x-6, y:TEE.y-14, z:1.5, r:Math.PI/2};
+    if(S.camMode==='track') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.45, z:1.18, r:0};
+    if(S.camMode==='land')  return {x:S.ball.x, y:S.ball.y, z:1.7, r:0};
   }
-  return {x:W/2, y:AY, z:1};
+  return {x:W/2, y:AY, z:1, r:0};
 }
 function clampCam(t){
   const z=t.z;
-  return {z,
+  if(t.r) return t;                                // reverse angle frames the tee itself
+  return {z, r:t.r||0,
     x:Math.min(W-W/(2*z), Math.max(W/(2*z), t.x)),
     y:Math.min(H-(H-AY)/z, Math.max(AY/z, t.y))};
 }
 function updateCam(dt){
   const t=clampCam(camTarget()), k=1-Math.exp(-dt*5.5);
   S.cam.x+=(t.x-S.cam.x)*k; S.cam.y+=(t.y-S.cam.y)*k; S.cam.z+=(t.z-S.cam.z)*k;
+  S.cam.r+=(t.r-S.cam.r)*(1-Math.exp(-dt*4.2));    // slightly slower roll = TV sweep
 }
 function cutTo(mode){                              // hard cut with a broadcast dip
   S.camMode=mode;
   const t=clampCam(camTarget());
-  S.cam.x=t.x; S.cam.y=t.y; S.cam.z=t.z; S.flash=0.14;
+  S.cam.x=t.x; S.cam.y=t.y; S.cam.z=t.z; S.cam.r=t.r||0; S.flash=0.14;
 }
 function landCam(){ if(S.phase==='flight' && S.camMode!=='land') cutTo('land'); }
-function w2s(x,y){ return {x:(x-S.cam.x)*S.cam.z+W/2, y:(y-S.cam.y)*S.cam.z+AY}; }
+function w2s(x,y){
+  const c=Math.cos(S.cam.r), s=Math.sin(S.cam.r);
+  const dx=(x-S.cam.x)*S.cam.z, dy=(y-S.cam.y)*S.cam.z;
+  return {x:dx*c-dy*s+W/2, y:dx*s+dy*c+AY};
+}
 
 /* pick where the ball finally rests, biased toward the player's aim */
 function restPoint(tier){
@@ -1170,8 +1181,9 @@ $('rReplay').onclick=()=>startReplay(()=>{ S.phase='result'; $('result').classLi
 function evPos(e){
   const r=cv.getBoundingClientRect();
   const sx=(e.clientX-r.left)*W/r.width, sy=(e.clientY-r.top)*H/r.height;
-  // un-project through the broadcast camera so input stays exact mid-zoom
-  return {x:(sx-W/2)/S.cam.z+S.cam.x, y:(sy-AY)/S.cam.z+S.cam.y};
+  // un-project through the broadcast camera (rotation-aware) so input stays exact mid-zoom
+  const c=Math.cos(-S.cam.r), s=Math.sin(-S.cam.r), dx=sx-W/2, dy=sy-AY;
+  return {x:(dx*c-dy*s)/S.cam.z+S.cam.x, y:(dx*s+dy*c)/S.cam.z+S.cam.y};
 }
 cv.addEventListener('pointerdown',e=>{
   ac(); startAmbient(); const p=evPos(e); cv.setPointerCapture(e.pointerId);
@@ -1222,6 +1234,8 @@ function grassTex(){
 }
 function drawCourse(){
   const th=WEATHER[S.weather];
+  // oversize base so the reverse-angle camera never sees past the world edge
+  cx.fillStyle='#26602e'; cx.fillRect(-500,-500,W+1000,H+1000);
   // mainland grass base — fairway gradient + mown stripes + fine grain, drawn once to an offscreen tile
   const g=cx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#2f7137'); g.addColorStop(.55,'#2a6631'); g.addColorStop(1,'#22562a');
@@ -1263,20 +1277,31 @@ function drawCourse(){
   for(let i=0;i<7;i++){ const yy=LAKE.y+40+i*70+Math.sin(tSec+i)*4;
     cx.beginPath(); cx.ellipse(LAKE.x+LAKE.w*.62,yy,10,3,0,0,7); cx.fill(); }
   cx.globalAlpha=1; cx.restore();
-  // lily pads floating on the lake
+  // lily pads — notched pads sitting in the water with a soft rim reflection
   for(const p of LILIES){
-    cx.fillStyle='rgba(0,0,0,.14)'; cx.beginPath(); cx.ellipse(p.x+1,p.y+2,p.r,p.r*.72,0,0,7); cx.fill();
-    cx.fillStyle='#2f7a41'; cx.beginPath(); cx.ellipse(p.x,p.y,p.r,p.r*.72,0.3,0.5,7); cx.fill();
-    cx.fillStyle='#3f9350'; cx.beginPath(); cx.ellipse(p.x-p.r*.15,p.y-p.r*.15,p.r*.7,p.r*.5,0.3,0,7); cx.fill();
+    const pr=p.r*.82, na=0.9;                       // notch angle faces up-right
+    cx.fillStyle='rgba(255,255,255,.10)'; cx.beginPath(); cx.ellipse(p.x,p.y+2.2,pr*1.1,pr*.5,0,0,7); cx.fill();
+    cx.fillStyle='#2c6e3c'; cx.beginPath();
+    cx.moveTo(p.x,p.y); cx.arc(p.x,p.y,pr,na+.45,na-.45+Math.PI*2); cx.closePath(); cx.fill();
+    cx.fillStyle='#3c8a4c'; cx.beginPath();
+    cx.moveTo(p.x,p.y); cx.arc(p.x,p.y,pr*.66,na+.5,na-.5+Math.PI*2); cx.closePath(); cx.fill();
+    cx.strokeStyle='rgba(20,55,30,.5)'; cx.lineWidth=.8;
+    cx.beginPath(); cx.moveTo(p.x,p.y); cx.lineTo(p.x+Math.cos(na)*pr,p.y+Math.sin(na)*pr); cx.stroke();
   }
-  // decorative trees on the mainland margin — trunk + layered canopy + shadow
+  // trees — irregular multi-lobe canopies with dappled light (drawn top-down)
   for(const t of TREES){
-    cx.fillStyle='rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(t.x+3,t.y+t.r*.9,t.r*.9,t.r*.38,0,0,7); cx.fill();
-    cx.fillStyle='#5a3d22'; cx.fillRect(t.x-2, t.y, 4, t.r*.9);
-    cx.fillStyle='#173c1d'; cx.beginPath(); cx.arc(t.x+2,t.y+2,t.r,0,7); cx.fill();
-    cx.fillStyle='#256a30'; cx.beginPath(); cx.arc(t.x,t.y,t.r*.92,0,7); cx.fill();
-    cx.fillStyle='#2f7f3a'; cx.beginPath(); cx.arc(t.x-t.r*.28,t.y-t.r*.3,t.r*.55,0,7); cx.fill();
-    cx.fillStyle='rgba(255,255,255,.09)'; cx.beginPath(); cx.arc(t.x-t.r*.35,t.y-t.r*.38,t.r*.34,0,7); cx.fill();
+    const r=t.r;
+    cx.fillStyle='rgba(3,18,8,.30)'; cx.beginPath(); cx.ellipse(t.x+r*.34,t.y+r*.42,r*1.1,r*.85,0.3,0,7); cx.fill();
+    const lobes=[[0,0,1],[-.55,-.35,.62],[.5,-.42,.55],[.42,.5,.5],[-.45,.48,.52],[-.05,-.62,.48]];
+    cx.fillStyle='#14351b';                                          // dark under-canopy
+    for(const[lx,ly,lr]of lobes){ cx.beginPath(); cx.arc(t.x+lx*r+1.5,t.y+ly*r+1.8,lr*r*1.04,0,7); cx.fill(); }
+    cx.fillStyle='#245f2e';                                          // mid canopy
+    for(const[lx,ly,lr]of lobes){ cx.beginPath(); cx.arc(t.x+lx*r,t.y+ly*r,lr*r,0,7); cx.fill(); }
+    cx.fillStyle='#357b3f';                                          // lit lobes (upper-left sun)
+    for(const[lx,ly,lr]of lobes){ if(lx+ly<0.2){ cx.beginPath(); cx.arc(t.x+lx*r-r*.1,t.y+ly*r-r*.12,lr*r*.68,0,7); cx.fill(); } }
+    cx.fillStyle='rgba(190,255,190,.10)';                            // dappled highlights
+    cx.beginPath(); cx.arc(t.x-r*.4,t.y-r*.45,r*.30,0,7); cx.fill();
+    cx.beginPath(); cx.arc(t.x+r*.1,t.y-r*.55,r*.20,0,7); cx.fill();
   }
   // island: drop shadow → sandy shore → rough → collar → lit putting surface
   cx.fillStyle='rgba(3,18,34,.30)'; cx.beginPath(); cx.ellipse(GC.x+5,GC.y+11,R.island+3,R.island-1,0,0,7); cx.fill();
@@ -1307,16 +1332,24 @@ function drawCourse(){
     const bg=cx.createRadialGradient(b.x-5,b.y-5,2,b.x,b.y,b.rx);
     bg.addColorStop(0,'#f6ecd2'); bg.addColorStop(1,'#dcc998');
     cx.fillStyle=bg; cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.fill();
+    cx.save(); cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,0,7); cx.clip();     // raked sand
+    cx.strokeStyle='rgba(160,130,70,.20)'; cx.lineWidth=1;
+    for(let i=-3;i<=3;i++){ cx.beginPath(); cx.ellipse(b.x,b.y,Math.max(1,b.rx-4-i*4),Math.max(1,b.ry-3-i*3),0,0,7); cx.stroke(); }
+    cx.restore();
     cx.fillStyle='rgba(150,118,58,.22)'; cx.beginPath(); cx.ellipse(b.x,b.y+3,b.rx*.6,b.ry*.5,0,0,7); cx.fill();
+    cx.strokeStyle='rgba(255,250,235,.5)'; cx.lineWidth=1.4;                        // sun-lit lip
+    cx.beginPath(); cx.ellipse(b.x,b.y,b.rx,b.ry,0,Math.PI*1.05,Math.PI*1.8); cx.stroke();
   }
-  // scoring rings (bright while aiming)
+  // scoring rings — thin broadcast-style range circles, lit while aiming
   const hot = S.phase==='aim'||S.phase==='power';
-  cx.globalAlpha = hot?0.9:0.35;
-  cx.fillStyle='rgba(255,140,40,.30)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.outer,0,7); cx.fill();
-  cx.strokeStyle='rgba(255,140,40,.9)'; cx.lineWidth=1.5; cx.stroke();
-  cx.fillStyle='rgba(255,220,60,.35)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.inner,0,7); cx.fill();
-  cx.strokeStyle='rgba(255,220,60,.95)'; cx.stroke();
-  cx.globalAlpha=1;
+  cx.save(); cx.globalAlpha = hot?0.85:0.22;
+  const pg=cx.createRadialGradient(GC.x,GC.y,2,GC.x,GC.y,R.inner);
+  pg.addColorStop(0,'rgba(255,232,150,.34)'); pg.addColorStop(1,'rgba(255,232,150,0)');
+  cx.fillStyle=pg; cx.beginPath(); cx.arc(GC.x,GC.y,R.inner,0,7); cx.fill();  // soft glow at the pin
+  cx.setLineDash([2,5]); cx.lineWidth=1.2;
+  cx.strokeStyle='rgba(255,255,255,.75)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.inner,0,7); cx.stroke();
+  cx.strokeStyle='rgba(255,255,255,.45)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.outer,0,7); cx.stroke();
+  cx.setLineDash([]); cx.restore();
   // hole — cup with a lit rim
   cx.fillStyle='rgba(255,255,255,.5)'; cx.beginPath(); cx.arc(GC.x,GC.y,R.hole+1.5,0,7); cx.fill();
   const hg=cx.createRadialGradient(GC.x,GC.y-2,1,GC.x,GC.y,R.hole);
@@ -1333,16 +1366,32 @@ function drawCourse(){
   cx.closePath(); cx.fill();
   cx.fillStyle='rgba(255,255,255,.18)'; cx.beginPath();
   cx.moveTo(GC.x,GC.y-35); cx.quadraticCurveTo(GC.x+flap*.6,GC.y-33+wob,GC.x+flap+9,GC.y-30); cx.lineTo(GC.x,GC.y-31); cx.closePath(); cx.fill();
-  // tee box on the mainland at the bottom
-  cx.fillStyle='#3f8f47'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y,52,24,0,0,7); cx.fill();
-  cx.fillStyle='rgba(255,255,255,.05)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y-3,40,15,0,0,7); cx.fill();
-  cx.fillStyle='rgba(0,0,0,.16)'; cx.beginPath(); cx.ellipse(TEE.x,TEE.y+7,38,13,0,0,7); cx.fill();
+  // tee box — mown championship tee pad with markers
+  cx.fillStyle='rgba(3,18,8,.22)'; cx.beginPath(); cx.roundRect(TEE.x-50,TEE.y-22,104,48,10); cx.fill(); // pad AO
+  const tp=cx.createLinearGradient(TEE.x-48,TEE.y-24,TEE.x+48,TEE.y+22);
+  tp.addColorStop(0,'#48a251'); tp.addColorStop(1,'#357c3e');
+  cx.fillStyle=tp; cx.beginPath(); cx.roundRect(TEE.x-48,TEE.y-24,96,44,8); cx.fill();
+  cx.save(); cx.beginPath(); cx.roundRect(TEE.x-48,TEE.y-24,96,44,8); cx.clip();  // pad mow stripes
+  cx.globalAlpha=.06; cx.fillStyle='#fff';
+  for(let sx=-48;sx<48;sx+=16) cx.fillRect(TEE.x+sx,TEE.y-24,8,44);
+  cx.globalAlpha=1; cx.restore();
+  cx.strokeStyle='rgba(255,255,255,.14)'; cx.lineWidth=1.2;
+  cx.beginPath(); cx.roundRect(TEE.x-48,TEE.y-24,96,44,8); cx.stroke();
+  for(const mx of [-38,38]){                                             // tee markers
+    cx.fillStyle='rgba(0,0,0,.28)'; cx.beginPath(); cx.ellipse(TEE.x+mx+1,TEE.y-14+2,3.4,1.6,0,0,7); cx.fill();
+    const mg=cx.createRadialGradient(TEE.x+mx-1,TEE.y-16,0.5,TEE.x+mx,TEE.y-14,3.6);
+    mg.addColorStop(0,'#7dffab'); mg.addColorStop(1,'#1d9e4e');
+    cx.fillStyle=mg; cx.beginPath(); cx.arc(TEE.x+mx,TEE.y-14,3.4,0,7); cx.fill();
+  }
 }
 function drawAimUI(){
   if(S.phase!=='aim' && S.phase!=='power') return;
-  // dashed shot line
-  cx.save(); cx.setLineDash([7,9]); cx.strokeStyle='rgba(255,120,240,.85)'; cx.lineWidth=2.5;
-  cx.beginPath(); cx.moveTo(TEE.x,TEE.y-10); cx.quadraticCurveTo(186,430,S.aim.x,S.aim.y); cx.stroke(); cx.restore();
+  // target line — subtle broadcast white, marching toward the pin
+  cx.save();
+  cx.setLineDash([1.5,10]); cx.lineDashOffset=-(performance.now()/60)%11.5;
+  cx.strokeStyle='rgba(255,255,255,.55)'; cx.lineWidth=2; cx.lineCap='round';
+  cx.beginPath(); cx.moveTo(TEE.x,TEE.y-10); cx.quadraticCurveTo(186,430,S.aim.x,S.aim.y); cx.stroke();
+  cx.restore();
   // reticle
   const t=performance.now()/1000, pr=15+Math.sin(t*4)*1.6;
   cx.strokeStyle='#fff'; cx.lineWidth=2.5;
@@ -1573,12 +1622,12 @@ function drawBall(){
   const b=S.ball, sc=(1+b.alt/260)*b.scale, by=b.y-b.alt*.55, ch=curChar();
   // character swing-trail (the "drip") — while the ball is in motion
   const moving = S.phase==='flight'||S.phase==='replay';
-  if(moving){ S.ballTrail.push({x:b.x,y:by,r:6*sc}); if(S.ballTrail.length>12) S.ballTrail.shift(); }
+  if(moving){ S.ballTrail.push({x:b.x,y:by,r:4*sc}); if(S.ballTrail.length>7) S.ballTrail.shift(); }
   else S.ballTrail.length=0;
   for(let i=0;i<S.ballTrail.length;i++){
-    const p=S.ballTrail[i], a=(i/S.ballTrail.length)*.5;
+    const p=S.ballTrail[i], a=(i/S.ballTrail.length)*.22;
     cx.globalAlpha=a; cx.fillStyle=ch.trail;
-    cx.beginPath(); cx.arc(p.x,p.y,p.r*(0.4+i/S.ballTrail.length*0.6),0,7); cx.fill();
+    cx.beginPath(); cx.arc(p.x,p.y,p.r*(0.3+i/S.ballTrail.length*0.5),0,7); cx.fill();
   }
   cx.globalAlpha=1;
   // ground shadow — softens and drifts out as the ball climbs
@@ -1648,13 +1697,15 @@ const GALLERY=(function(){
   return pts.sort((a,b)=>a.y-b.y);
 })();
 function drawGallery(){
-  const t=performance.now()/1000;
+  const t=performance.now()/1000, rot=S.cam.r;
   const cheer=S.phase==='celebrate' || (S.phase==='flight' && !S.ball.on);
   for(const g of GALLERY){
     const hop=cheer?Math.abs(Math.sin(t*7+g.b))*2.4:0;
-    cx.fillStyle='rgba(0,0,0,.22)'; cx.beginPath(); cx.ellipse(g.x,g.y+2.6,3.2,1.2,0,0,7); cx.fill();
-    cx.fillStyle=g.c; cx.beginPath(); cx.roundRect(g.x-2.5,g.y-6-hop,5,6.6,2); cx.fill();
-    cx.fillStyle=g.k; cx.beginPath(); cx.arc(g.x,g.y-8.2-hop,2.1,0,7); cx.fill();
+    cx.save(); cx.translate(g.x,g.y); if(rot) cx.rotate(-rot);   // billboard the crowd too
+    cx.fillStyle='rgba(0,0,0,.22)'; cx.beginPath(); cx.ellipse(0,2.6,3.2,1.2,0,0,7); cx.fill();
+    cx.fillStyle=g.c; cx.beginPath(); cx.roundRect(-2.5,-6-hop,5,6.6,2); cx.fill();
+    cx.fillStyle=g.k; cx.beginPath(); cx.arc(0,-8.2-hop,2.1,0,7); cx.fill();
+    cx.restore();
   }
 }
 function drawWindHud(){
@@ -1765,7 +1816,7 @@ function frame(now){
   if(S.shake.t>0){ S.shake.t-=dt; const f=Math.max(0,S.shake.t/S.shake.dur); shx=spread_(1)*S.shake.mag*f; shy=spread_(1)*S.shake.mag*f; }
   // world pass, through the broadcast camera (+ shake)
   cx.save();
-  cx.translate(W/2+shx,AY+shy); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
+  cx.translate(W/2+shx,AY+shy); cx.rotate(S.cam.r); cx.scale(S.cam.z,S.cam.z); cx.translate(-S.cam.x,-S.cam.y);
   drawCourse();
   drawGallery();
   drawAimUI();
