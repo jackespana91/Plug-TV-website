@@ -10,7 +10,9 @@
     --plug:#39ff7a; --gold:#ffd34d; --red:#ff5d5d;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;overflow:hidden;
+            overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  body{touch-action:none}
   #wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
   #stage{position:relative}
   canvas{display:block;border-radius:18px;touch-action:none;background:#123a1e}
@@ -46,7 +48,7 @@
   #rules{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
          padding:18px;background:linear-gradient(to top,rgba(5,8,6,.97) 62%,rgba(5,8,6,.5));border-radius:18px}
   #rules h2{font-size:20px;font-weight:900;margin-bottom:10px}
-  .rulesbody{width:100%;max-width:360px;max-height:62vh;overflow-y:auto;color:var(--txt);font-size:12.5px;line-height:1.5}
+  .rulesbody{width:100%;max-width:360px;max-height:62vh;overflow-y:auto;color:var(--txt);font-size:12.5px;line-height:1.5;touch-action:pan-y}
   .rulesbody h3{font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--plug);margin:14px 0 5px}
   .rulesbody h3:first-child{margin-top:0}
   .rulesbody p{color:#cbd8ce;margin-bottom:6px}
@@ -849,7 +851,7 @@ function commOff(){ commTimers.forEach(clearTimeout); commTimers=[]; $('commBar'
 function toPower(){
   S.phase='power'; S.pull=0;
   $('lockAim').classList.add('hidden');
-  prompt('Pull the ball back… release to swing','hit the green band for a PURE strike');
+  prompt('Drag down anywhere… release to swing','hit the green band for a PURE strike');
 }
 $('lockAim').onclick=()=>{ tone(560,.06,'triangle',.08); toPower(); };
 $('again').onclick =()=>{ if(!RGS && S.balance<S.bet){ S.balance=1000; refreshHud(); caption('Credits reset','small'); } toAim(); };
@@ -1263,16 +1265,18 @@ function evPos(e){
   const c=Math.cos(-S.cam.r), s=Math.sin(-S.cam.r), dx=sx-W/2, dy=sy-AY;
   return {x:(dx*c-dy*s)/S.cam.z+S.cam.x, y:(dx*s+dy*c)/S.cam.z+S.cam.y};
 }
+// stop mobile scroll/pull-to-refresh from hijacking the swing gesture
+document.addEventListener('touchmove',e=>{ if(!e.target.closest('.rulesbody')) e.preventDefault(); },{passive:false});
 cv.addEventListener('pointerdown',e=>{
   ac(); startAmbient(); const p=evPos(e); cv.setPointerCapture(e.pointerId);
   if(S.phase==='replay'){ S.replayT=S.replayEnd; return; }   // tap to skip replay
   if(S.phase==='aim'){ S.drag='aim'; setAim(p); }
-  else if(S.phase==='power' && dist(p,{x:TEE.x,y:TEE.y})<90){ S.drag='power'; S.pull=0; }
+  else if(S.phase==='power'){ S.drag='power'; S.pullY0=p.y; S.pull=0; } // pull from ANYWHERE on screen
 });
 cv.addEventListener('pointermove',e=>{
   const p=evPos(e);
   if(S.drag==='aim') setAim(p);
-  else if(S.drag==='power'){ S.pull=Math.max(0,Math.min(1,(p.y-TEE.y)/130)); }
+  else if(S.drag==='power'){ S.pull=Math.max(0,Math.min(1,(p.y-S.pullY0)/130)); } // relative to where the finger started
 });
 cv.addEventListener('pointerup',()=>{
   if(S.drag==='power'){ if(S.pull>=0.15) swing(); else S.pull=0; }
