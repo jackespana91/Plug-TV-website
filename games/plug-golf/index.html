@@ -536,12 +536,82 @@ function drawGolferSprite(wx,wy,frame){
   cx.drawImage(im, col*SPRITE.fw, row*SPRITE.fh, SPRITE.fw, SPRITE.fh, -SPRITE.ax*s, -SPRITE.ay*s, dw, dh);
   cx.restore();
 }
-// the sprite carries its own ball through the strike; hide the game ball only
-// while the swing sprite is on screen pre-impact (aim/power show the real ball)
-function ballHiddenForSprite(){
-  if(!spriteReady()) return false;
-  if(S.phase==='flight' && S.swingT!=null && S.swingT<0.11) return true;
-  return false;
+/* ---------- the swing cutaway: ground-level TV camera at the tee ----------
+   The whole swing plays as a broadcast cut — Drip at eye level against sky and
+   water, island on the horizon along his target line — then a cut back to the
+   aerial view where the ball is already flying. */
+function cutawayActive(){ return spriteReady() && S.phase==='flight' && S.swingT!=null && S.swingT<0.5; }
+function cutawayFrame(t){        // full 8-frame swing paced across the cutaway
+  if(t<0.05) return 0; if(t<0.12) return 1; if(t<0.18) return 2; if(t<0.26) return 3;
+  if(t<0.295) return 4; if(t<0.35) return 5; if(t<0.42) return 6; return 7;
+}
+function drawCutaway(){
+  if(!cutawayActive()) return;
+  const t=S.swingT, th=WEATHER[S.weather], now=performance.now()/1000;
+  let shx=0,shy=0;
+  if(S.shake.t>0){ const f=Math.max(0,S.shake.t/S.shake.dur); shx=spread_(1)*S.shake.mag*f; shy=spread_(1)*S.shake.mag*f; }
+  cx.save(); cx.translate(shx,shy);
+  // sky, graded by the weather
+  const hy=H*0.60;
+  const sky=cx.createLinearGradient(0,0,0,hy);
+  if(th.name==='Sunset'){ sky.addColorStop(0,'#2e2a55'); sky.addColorStop(.55,'#b4522e'); sky.addColorStop(1,'#ffb86b'); }
+  else if(th.name==='Night'){ sky.addColorStop(0,'#060b1e'); sky.addColorStop(1,'#20355c'); }
+  else if(th.name==='Rain'){ sky.addColorStop(0,'#5c6d7d'); sky.addColorStop(1,'#a8b7c2'); }
+  else { sky.addColorStop(0,'#3d9ae8'); sky.addColorStop(1,'#bfe6ff'); }
+  cx.fillStyle=sky; cx.fillRect(-8,-8,W+16,hy+8);
+  if(th.name==='Night'){ cx.fillStyle='#dfe9ff';
+    for(let i=0;i<42;i++){ cx.globalAlpha=.25+((i*37)%10)/16; cx.fillRect((i*97)%W,(i*61)%(hy*.8),1.6,1.6); }
+    cx.globalAlpha=1;
+    cx.fillStyle='#f4f1e0'; cx.beginPath(); cx.arc(W*0.16,70,17,0,7); cx.fill();
+    cx.fillStyle= '#20355c'; cx.beginPath(); cx.arc(W*0.16+7,64,15,0,7); cx.fill();
+  }
+  if(th.name==='Sunset'){ cx.fillStyle='rgba(255,224,150,.95)'; cx.beginPath(); cx.arc(W*0.76,hy*0.55,24,0,7); cx.fill();
+    cx.fillStyle='rgba(255,190,110,.22)'; cx.beginPath(); cx.arc(W*0.76,hy*0.55,52,0,7); cx.fill(); }
+  if(th.name==='Sunny'||th.name==='Rain'){
+    cx.fillStyle= th.name==='Rain' ? 'rgba(120,135,148,.8)' : 'rgba(255,255,255,.85)';
+    for(const c of [[70,86,36],[306,58,44],[196,132,26]]){
+      const cxp=c[0]+Math.sin(now*.06+c[1])*9;
+      cx.beginPath(); cx.ellipse(cxp,c[1],c[2],c[2]*.4,0,0,7);
+      cx.ellipse(cxp+c[2]*.66,c[1]+5,c[2]*.6,c[2]*.28,0,0,7); cx.fill();
+    }
+  }
+  // the lake on the horizon + the island he's swinging toward (screen right)
+  const wat=cx.createLinearGradient(0,hy-44,0,hy+58);
+  wat.addColorStop(0, th.name==='Night'?'#123a64':'#2f8fd0'); wat.addColorStop(1, th.name==='Night'?'#0a2140':'#1b5f9e');
+  cx.fillStyle=wat; cx.fillRect(-8,hy-44,W+16,104);
+  cx.globalAlpha=.22; cx.fillStyle='#fff';
+  for(let i=0;i<14;i++){ const gx=((i*53+now*9)%(W+40))-20; cx.fillRect(gx,hy-30+(i%5)*13,12,1.3); }
+  cx.globalAlpha=1;
+  cx.fillStyle= th.name==='Night' ? '#17321f' : '#2f7a3c';
+  cx.beginPath(); cx.ellipse(W*0.8,hy-42,58,12,0,Math.PI,0); cx.fill();      // island silhouette
+  cx.strokeStyle='#eef3f0'; cx.lineWidth=1.4;
+  cx.beginPath(); cx.moveTo(W*0.8,hy-46); cx.lineTo(W*0.8,hy-64); cx.stroke();
+  cx.fillStyle='#ff4040'; cx.beginPath();
+  cx.moveTo(W*0.8,hy-64); cx.lineTo(W*0.8+10,hy-60.5); cx.lineTo(W*0.8,hy-57); cx.closePath(); cx.fill();
+  // fairway falling away to the tee turf
+  const gr=cx.createLinearGradient(0,hy+56,0,H);
+  gr.addColorStop(0,'#4f9a45'); gr.addColorStop(.45,'#3a8a3f'); gr.addColorStop(1,'#235b2b');
+  cx.fillStyle=gr; cx.fillRect(-8,hy+56,W+16,H-hy);
+  cx.fillStyle='rgba(255,255,255,.06)'; cx.beginPath(); cx.ellipse(W*0.45,H-116,150,32,0,0,7); cx.fill();
+  cx.strokeStyle='rgba(10,40,16,.5)'; cx.lineWidth=2;                        // foreground blades
+  for(let i=0;i<26;i++){ const gx=(i*67)%W, gy=H-22+((i*31)%16);
+    cx.beginPath(); cx.moveTo(gx,gy); cx.quadraticCurveTo(gx+3,gy-9,gx+6,gy-13); cx.stroke(); }
+  // the swing, big and ground-level (sprite carries its own ball + strike spark)
+  const gx=W*0.45, gy=H-126, s0=SPRITE.scale, r0=S.cam.r;
+  SPRITE.scale=0.52; S.cam.r=0;
+  drawGolferSprite(gx,gy,cutawayFrame(t));
+  SPRITE.scale=s0; S.cam.r=r0;
+  if(t>=0.30&&t<0.42){                                                       // launch streak off the face
+    const k=(t-0.30)/0.12;
+    cx.strokeStyle=`rgba(255,255,255,${(1-k)*0.85})`; cx.lineWidth=3.4-2.2*k; cx.lineCap='round';
+    cx.beginPath(); cx.moveTo(gx+34+k*60,gy-8-k*36); cx.lineTo(gx+120+k*250,gy-30-k*100); cx.stroke();
+  }
+  // broadcast letterbox
+  const lb1=cx.createLinearGradient(0,0,0,28); lb1.addColorStop(0,'rgba(0,0,0,.55)'); lb1.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=lb1; cx.fillRect(0,0,W,28);
+  const lb2=cx.createLinearGradient(0,H-28,0,H); lb2.addColorStop(0,'rgba(0,0,0,0)'); lb2.addColorStop(1,'rgba(0,0,0,.55)');
+  cx.fillStyle=lb2; cx.fillRect(0,H-28,W,28);
+  cx.restore();
 }
 
 /* ---------- state ---------- */
@@ -929,7 +999,7 @@ async function swing(){
   if(Math.random()<0.7) commentate('inAir',1.9,()=>S.phase==='flight'&&S.ball.on); // urging it mid-air
   $('lockAim').classList.add('hidden');
   S.rec=[]; S.recT=0; S.replayed=false;                      // record for replay
-  S.swingT=0; S.swungImpact=false;                           // golfer swings; impact fires the strike
+  S.swingT=0; S.swungImpact=false; S._cutb=false;            // golfer swings; impact fires the strike
   cutTo('tee');                                              // broadcast: tee cam
   prompt(''); sSwing();
   if(S.quality>0.92) caption('PURE STRIKE!','pop');
@@ -949,12 +1019,11 @@ const easeOut=k=>1-Math.pow(1-k,3);
    Identity view during club/aim/power so pointer input needs no un-projection. */
 const AY = 342;                                    // screen anchor line for the camera
 function camTarget(){
-  /* r = camera roll. The tee cam is a REVERSE ANGLE: the world turns +90° so the
-     green lies screen-right — the exact line the face-on golfer swings along.
-     As the cam whips to tracking, r eases back to 0 (the sweep back to north-up). */
+  /* during the swing the screen is covered by the ground-level cutaway, so the
+     tee cam pre-frames the aerial reveal: tee at the bottom, island above */
   if(S.phase==='replay') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.5, z:2.1, r:0};
   if((S.phase==='flight'||S.phase==='result') && S.camMode!=='wide'){
-    if(S.camMode==='tee')   return {x:TEE.x-6, y:TEE.y-14, z:1.5, r:Math.PI/2};
+    if(S.camMode==='tee')   return {x:TEE.x, y:TEE.y-110, z:1.2, r:0};
     if(S.camMode==='track') return {x:S.ball.x, y:S.ball.y-S.ball.alt*.45, z:1.18, r:0};
     if(S.camMode==='land')  return {x:S.ball.x, y:S.ball.y, z:1.7, r:0};
   }
@@ -1788,12 +1857,7 @@ function swingPose(){
   return SWING.follow;                                                // hold the finish
 }
 function drawTeeGolfer(){
-  if(spriteReady()){
-    // the face-on sprite stands sideways to the hole, so he only appears with
-    // the reverse-angle swing cut — the view where his swing line is correct
-    if(!(S.phase==='flight' && S.swingT!=null && S.swingT<0.7)) return;
-    drawGolferSprite(TEE.x, TEE.y+7, swingFrameIndex()); return;
-  }
+  if(spriteReady()) return;                        // sprite golfer lives in the cutaway + celebration only
   const teeVisible = S.phase==='aim'||S.phase==='power'||(S.phase==='flight'&&S.swingT!=null&&S.swingT<0.7);
   if(!teeVisible) return;
   const ch=curChar(), p=swingPose();               // fallback: procedural golfer
@@ -1866,7 +1930,7 @@ function startCelebration(char,done){
 function spread_(m){ return (Math.random()*2-1)*m; }
 
 function drawBall(){
-  if(!S.ball.on || ballHiddenForSprite()){ S.ballTrail.length=0; return; }
+  if(!S.ball.on){ S.ballTrail.length=0; return; }
   const b=S.ball, sc=(1+b.alt/260)*b.scale, by=b.y-b.alt*.55, ch=curChar();
   // character swing-trail (the "drip") — while the ball is in motion
   const moving = S.phase==='flight'||S.phase==='replay';
@@ -1918,6 +1982,7 @@ function drawTracer(){
 /* live to-pin readout while the ball flies (screen space) */
 function drawShotTracker(){
   if(!((S.phase==='flight'||S.phase==='replay') && S.ball.on)) return;
+  if(cutawayActive()) return;                           // the cutaway owns the screen
   if(S.swingT!=null && S.swingT<0.12) return;           // wait until it's away
   const yds=Math.max(0,Math.round(Math.hypot(GC.x-S.ball.x,GC.y-S.ball.y)*ydsPerUnit()));
   const txt=yds+' YDS TO PIN';
@@ -1949,6 +2014,7 @@ function drawParticles(dt){
     const k=p.age/p.life;
     // world particles (splash) live on the course and ride the camera;
     // celebration confetti/fireworks are screen-space.
+    if(p.world && cutawayActive()) continue;         // course particles stay behind the cutaway
     const z = p.world ? S.cam.z : 1;
     const at = p.world ? w2s(p.x,p.y) : p;
     if(p.type==='rect'){
@@ -2025,7 +2091,9 @@ function frame(now){
   if(S.phase==='flight') record(dt);
   if(S.swingT!=null){
     S.swingT+=dt;
-    if(!S.swungImpact && S.swingT>=0.11){ S.swungImpact=true; impactFx(); }  // club meets ball
+    // club meets ball — the cutaway swing is paced slower than the old inline swing
+    if(!S.swungImpact && S.swingT>=(spriteReady()?0.30:0.11)){ S.swungImpact=true; impactFx(); }
+    if(!S._cutb && spriteReady() && S.swingT>=0.5){ S._cutb=true; S.flash=0.14; } // cut back to the aerial
     if(S.swingT>0.8) S.swingT=null;
   }
   if(S.celebrate){ S.celebrate.t+=dt; if(S.celebrate.t>=S.celebrate.dur){ const d=S.celebrate.done; S.celebrate=null; d&&d(); } }
@@ -2048,7 +2116,8 @@ function frame(now){
   drawTracer();
   drawBall();
   cx.restore();
-  // screen pass: HUD, particles, weather, cinema bars, celebration
+  // screen pass: cutaway, HUD, particles, weather, cinema bars, celebration
+  drawCutaway();
   drawWindHud();
   drawShotTracker();
   drawParticles(dt);
