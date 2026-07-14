@@ -1,0 +1,67 @@
+{
+  "gameId": "plug_golf",
+  "rtpTarget": 0.965,
+  "weightScale": 10000,
+  "modes": [
+    {
+      "name": "wedge",
+      "label": "Wedge",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 5,
+      "volatility": 1,
+      "events": "books_compressed/books_wedge.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_wedge.csv"
+    },
+    {
+      "name": "short_iron",
+      "label": "Short Iron",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 10,
+      "volatility": 2,
+      "events": "books_compressed/books_short_iron.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_short_iron.csv"
+    },
+    {
+      "name": "long_iron",
+      "label": "Long Iron",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 15,
+      "volatility": 3,
+      "events": "books_compressed/books_long_iron.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_long_iron.csv"
+    },
+    {
+      "name": "three_wood",
+      "label": "3 Wood",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 25,
+      "volatility": 4,
+      "events": "books_compressed/books_three_wood.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_three_wood.csv"
+    },
+    {
+      "name": "driver",
+      "label": "Driver",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 50,
+      "volatility": 5,
+      "events": "books_compressed/books_driver.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_driver.csv"
+    },
+    {
+      "name": "masters",
+      "label": "Sunday Masters",
+      "cost": 1.0,
+      "rtp": 0.965,
+      "maxWin": 100,
+      "volatility": 6,
+      "events": "books_compressed/books_masters.jsonl.zst",
+      "weights": "lookup_tables/lookUpTable_masters.csv"
+    }
+  ]
+}

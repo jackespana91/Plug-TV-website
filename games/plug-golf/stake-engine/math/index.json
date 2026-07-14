@@ -1,0 +1,40 @@
+{
+  "modes": [
+    {
+      "name": "wedge",
+      "cost": 1,
+      "events": "books_wedge.jsonl.zst",
+      "weights": "lookUpTable_wedge.csv"
+    },
+    {
+      "name": "short_iron",
+      "cost": 1,
+      "events": "books_short_iron.jsonl.zst",
+      "weights": "lookUpTable_short_iron.csv"
+    },
+    {
+      "name": "long_iron",
+      "cost": 1,
+      "events": "books_long_iron.jsonl.zst",
+      "weights": "lookUpTable_long_iron.csv"
+    },
+    {
+      "name": "three_wood",
+      "cost": 1,
+      "events": "books_three_wood.jsonl.zst",
+      "weights": "lookUpTable_three_wood.csv"
+    },
+    {
+      "name": "driver",
+      "cost": 1,
+      "events": "books_driver.jsonl.zst",
+      "weights": "lookUpTable_driver.csv"
+    },
+    {
+      "name": "masters",
+      "cost": 1,
+      "events": "books_masters.jsonl.zst",
+      "weights": "lookUpTable_masters.csv"
+    }
+  ]
+}

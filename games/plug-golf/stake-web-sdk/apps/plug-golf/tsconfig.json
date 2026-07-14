@@ -1,0 +1,21 @@
+{
+  "//": "App tsconfig for the Plug Golf web-sdk game. Mirrors the Stake Engine SDK's Svelte/Vite setup (bundler module resolution, strict). In the monorepo the app also extends the shared config-typescript package; this standalone file lets the pure game/ + test/ modules typecheck on their own.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "exactOptionalPropertyTypes": false,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/game/**/*.ts", "src/stories/**/*.ts", "test/**/*.ts"]
+}

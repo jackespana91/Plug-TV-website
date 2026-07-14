@@ -1,0 +1,20 @@
+{
+  "name": "plug-golf",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Plug Golf — RNG closest-to-the-pin game for the Stake Engine web-sdk",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test:engine": "node --experimental-strip-types test/shotEngine.test.ts"
+  },
+  "//deps": "Framework/runtime deps (svelte, pixi-svelte, @stake-engine/* state/utils packages, vite, storybook) are provided by the web-sdk monorepo workspace when this app lives under its apps/ dir. They are intentionally NOT pinned here — install by placing this folder in a web-sdk checkout and running pnpm install at the root.",
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0"
+  }
+}

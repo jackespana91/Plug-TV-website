@@ -1,0 +1,197 @@
+{
+  "canvas": {
+    "width": 840,
+    "height": 1520
+  },
+  "loop": {
+    "seconds": 6,
+    "fps": 24,
+    "frames": 144
+  },
+  "recommended_asset": "course_plate_loop.mp4",
+  "poster": "course_plate_loop_poster.png",
+  "static_fallback": "course_plate.png",
+  "masks": {
+    "water": "water_mask.png",
+    "water_displacement": "water_displacement_mask.png",
+    "tree_motion": "tree_motion_mask.png"
+  },
+  "video_notes": {
+    "audio": false,
+    "loop": true,
+    "coordinate_space": "All gameplay overlays should use the same 840x1520 coordinate system.",
+    "seam_mean_pixel_delta_last_to_first": 0.1683
+  },
+  "tree_wind_zones": [
+    {
+      "name": "top_right_1",
+      "center": [
+        760,
+        40
+      ],
+      "radii": [
+        82,
+        68
+      ],
+      "anchor": [
+        760,
+        75
+      ],
+      "max_sway_px": 2.2,
+      "phase_radians": 0.2
+    },
+    {
+      "name": "top_right_2",
+      "center": [
+        777,
+        230
+      ],
+      "radii": [
+        60,
+        78
+      ],
+      "anchor": [
+        777,
+        282
+      ],
+      "max_sway_px": 2.8,
+      "phase_radians": 1.1
+    },
+    {
+      "name": "top_right_3",
+      "center": [
+        782,
+        360
+      ],
+      "radii": [
+        70,
+        82
+      ],
+      "anchor": [
+        780,
+        414
+      ],
+      "max_sway_px": 3.1,
+      "phase_radians": 2.4
+    },
+    {
+      "name": "left_bank_upper",
+      "center": [
+        18,
+        690
+      ],
+      "radii": [
+        78,
+        82
+      ],
+      "anchor": [
+        30,
+        735
+      ],
+      "max_sway_px": 2.2,
+      "phase_radians": 0.7
+    },
+    {
+      "name": "left_bank_mid",
+      "center": [
+        63,
+        790
+      ],
+      "radii": [
+        108,
+        110
+      ],
+      "anchor": [
+        67,
+        865
+      ],
+      "max_sway_px": 3.8,
+      "phase_radians": 1.8
+    },
+    {
+      "name": "left_bank_lower",
+      "center": [
+        35,
+        880
+      ],
+      "radii": [
+        100,
+        125
+      ],
+      "anchor": [
+        62,
+        950
+      ],
+      "max_sway_px": 3.3,
+      "phase_radians": 3.0
+    },
+    {
+      "name": "right_bank",
+      "center": [
+        742,
+        925
+      ],
+      "radii": [
+        112,
+        118
+      ],
+      "anchor": [
+        745,
+        1000
+      ],
+      "max_sway_px": 4.0,
+      "phase_radians": 2.0
+    },
+    {
+      "name": "tee_left",
+      "center": [
+        153,
+        1175
+      ],
+      "radii": [
+        82,
+        98
+      ],
+      "anchor": [
+        153,
+        1245
+      ],
+      "max_sway_px": 3.1,
+      "phase_radians": 0.4
+    },
+    {
+      "name": "tee_right",
+      "center": [
+        671,
+        1175
+      ],
+      "radii": [
+        96,
+        112
+      ],
+      "anchor": [
+        671,
+        1257
+      ],
+      "max_sway_px": 3.5,
+      "phase_radians": 1.5
+    },
+    {
+      "name": "bottom_right",
+      "center": [
+        770,
+        1430
+      ],
+      "radii": [
+        108,
+        112
+      ],
+      "anchor": [
+        772,
+        1500
+      ],
+      "max_sway_px": 2.8,
+      "phase_radians": 2.8
+    }
+  ]
+}
