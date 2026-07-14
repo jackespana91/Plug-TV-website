@@ -536,10 +536,10 @@ function drawGolferSprite(wx,wy,frame){
   cx.drawImage(im, col*SPRITE.fw, row*SPRITE.fh, SPRITE.fw, SPRITE.fh, -SPRITE.ax*s, -SPRITE.ay*s, dw, dh);
   cx.restore();
 }
-// the sprite carries its own ball through the strike; hide the game ball until launch
+// the sprite carries its own ball through the strike; hide the game ball only
+// while the swing sprite is on screen pre-impact (aim/power show the real ball)
 function ballHiddenForSprite(){
   if(!spriteReady()) return false;
-  if(S.phase==='aim'||S.phase==='power') return true;
   if(S.phase==='flight' && S.swingT!=null && S.swingT<0.11) return true;
   return false;
 }
@@ -1788,9 +1788,14 @@ function swingPose(){
   return SWING.follow;                                                // hold the finish
 }
 function drawTeeGolfer(){
+  if(spriteReady()){
+    // the face-on sprite stands sideways to the hole, so he only appears with
+    // the reverse-angle swing cut — the view where his swing line is correct
+    if(!(S.phase==='flight' && S.swingT!=null && S.swingT<0.7)) return;
+    drawGolferSprite(TEE.x, TEE.y+7, swingFrameIndex()); return;
+  }
   const teeVisible = S.phase==='aim'||S.phase==='power'||(S.phase==='flight'&&S.swingT!=null&&S.swingT<0.7);
   if(!teeVisible) return;
-  if(spriteReady()){ drawGolferSprite(TEE.x, TEE.y+7, swingFrameIndex()); return; }
   const ch=curChar(), p=swingPose();               // fallback: procedural golfer
   drawFigure(TEE.x-16+p.dx, TEE.y-6, 1, {color:ch.color, face:ch.face,
     armL:p.armL, armR:p.armR, legL:2.5, legR:0.7, lean:p.lean, club:true, clubAng:p.clubAng});
