@@ -1860,34 +1860,6 @@ function drawShotTracker(){
   cx.fillStyle='#eafff2'; cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText(txt,x+w/2+1,y+11);
 }
-/* ---------- gallery: spectators flanking the tee + the rope line ---------- */
-const GALLERY=(function(){
-  let sd=97; const rnd=()=>{ sd=(sd*1103515245+12345)&0x7fffffff; return sd/0x7fffffff; };
-  const shirts=['#e8e4da','#c8d6e5','#f0c9a0','#a8c8a0','#d6b8d6','#e5c8c8','#b0c4de','#f5deb3'];
-  const skins=['#e6b98f','#c99a71','#8d5a3b','#6b4226','#f2cfa6'];
-  const pts=[];
-  const cluster=(ccx,ccy,rx,ry,n)=>{ for(let i=0;i<n;i++){
-    const a=rnd()*Math.PI*2, r=Math.sqrt(rnd());
-    const x=ccx+Math.cos(a)*rx*r, y=ccy+Math.sin(a)*ry*r;
-    if(Math.hypot(x-TEE.x,y-TEE.y)<64) continue;               // keep the tee box clear
-    pts.push({x,y,c:shirts[(rnd()*shirts.length)|0],k:skins[(rnd()*skins.length)|0],b:rnd()*6.28});
-  }};
-  cluster(88,714,56,34,26);  cluster(334,714,56,34,26);        // flanking the tee
-  cluster(118,616,66,9,13);  cluster(302,616,66,9,13);         // rope line at the water's edge
-  return pts.sort((a,b)=>a.y-b.y);
-})();
-function drawGallery(){
-  const t=performance.now()/1000, rot=S.cam.r;
-  const cheer=S.phase==='celebrate' || (S.phase==='flight' && !S.ball.on);
-  for(const g of GALLERY){
-    const hop=cheer?Math.abs(Math.sin(t*7+g.b))*2.4:0;
-    cx.save(); cx.translate(g.x,g.y); if(rot) cx.rotate(-rot);   // billboard the crowd too
-    cx.fillStyle='rgba(0,0,0,.22)'; cx.beginPath(); cx.ellipse(0,2.6,3.2,1.2,0,0,7); cx.fill();
-    cx.fillStyle=g.c; cx.beginPath(); cx.roundRect(-2.5,-6-hop,5,6.6,2); cx.fill();
-    cx.fillStyle=g.k; cx.beginPath(); cx.arc(0,-8.2-hop,2.1,0,7); cx.fill();
-    cx.restore();
-  }
-}
 function drawWindHud(){
   if(S.phase==='club'||S.phase==='result'||S.phase==='replay'||S.phase==='celebrate') return;
   const x=42,y=64;
@@ -2002,7 +1974,6 @@ function frame(now){
   const zp=S.cam.z*(1+S.punch*0.05);                 // zoom pop rides on top of the broadcast cam
   cx.translate(W/2+shx,AY+shy); cx.rotate(S.cam.r); cx.scale(zp,zp); cx.translate(-S.cam.x,-S.cam.y);
   drawCourse();
-  drawGallery();
   drawAimUI();
   drawPowerUI();
   drawTeeGolfer();
